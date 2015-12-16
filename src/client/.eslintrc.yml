@@ -1,0 +1,26 @@
+root: true
+
+env:
+    browser: true
+
+extends: "eslint"
+
+rules:
+    new-cap: [2, {capIsNew: false}]
+    no-use-before-define: [2, "nofunc"]
+    require-jsdoc: 0
+    space-before-function-paren: [2, {"anonymous": "always", "named": "never"}]
+    spaced-comment: [0, "always", { exceptions: ["-"]}]
+
+    angular/controller-name:
+        - 2
+        - "/[A-Z].*$/"
+    angular/log: 0
+    angular/window-service: 0
+    angular/document-service: 0
+
+globals:
+    ng: false
+
+plugins:
+    - angular

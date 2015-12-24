@@ -1,4 +1,7 @@
 # Angular 2 JumpStart with ES5.
+[![NGN Dependencies](https://david-dm.org/albertosantini/angular2-es5-jumpstart.png)](https://david-dm.org/albertosantini/angular2-es5-jumpstart)
+[![Build Status](https://travis-ci.org/albertosantini/angular2-es5-jumpstart.png)](https://travis-ci.org/albertosantini/angular2-es5-jumpstart)
+
 
 The goal of this jumpstart app is to provide a simple way to get started with
 Angular 2 while also showing several key Angular 2 features. The sample relies

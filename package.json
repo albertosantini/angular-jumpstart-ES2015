@@ -9,16 +9,16 @@
     },
     "license": "MIT",
     "dependencies": {
-        "angular2": "2.0.0-beta.0",
-        "systemjs": "0.19.9",
-        "es6-promise": "^3.0.2",
-        "reflect-metadata": "0.1.2",
-        "rxjs": "5.0.0-beta.0",
-        "zone.js": "0.5.10"
+        "angular2": "~2.0.0-beta.0",
+        "systemjs": "~0.19.9",
+        "es6-promise": "~3.0.2",
+        "reflect-metadata": "~0.1.2",
+        "rxjs": "~5.0.0-beta.0",
+        "zone.js": "~0.5.10"
     },
     "devDependencies": {
         "eslint": "~1.10.3",
         "eslint-config-eslint": "~1.0.1",
-        "lite-server": "^1.3.1"
+        "lite-server": "~1.3.2"
     }
 }

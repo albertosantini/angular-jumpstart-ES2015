@@ -13,4 +13,5 @@ rules:
     spaced-comment: [0, "always", { exceptions: ["-"]}]
 
 globals:
+    angular: false
     ng: false

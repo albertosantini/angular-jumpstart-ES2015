@@ -18,12 +18,14 @@ Then in the folder project:
 
 ## Features
 
+- Bootstrapping the app and the components
 - Using custom components
 - Defining properties and using events in components
 - Using the Http object for Ajax calls
 - Using data binding syntax
+- Mixing Angular 1 and Angular 2
 
-## Resources
+## Resources and Credits
 
 - [Angular Quickstart](https://angular.io/docs/ts/latest/quickstart.html)
 - [Angular 5 min Tutorial](https://angular.io/docs/ts/latest/tutorial/)

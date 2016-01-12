@@ -23,8 +23,7 @@
             bindings: [app.HttpService]
         })
         .View({
-            template: "{{ greeting }} world! {{ greetingFromJSON }}"
-            // templateUrl: "hello.html"
+            template: "<p>{{ greeting }} world! {{ greetingFromJSON }}</p>"
         })
         .Class({
             constructor: [app.HttpService, function Hello(httpService) {

@@ -2,9 +2,24 @@
 
 (function (app) {
 
-    function FriendsS() {}
+    function FriendsS() {
+        this.names = ["Aaren", "Martin", "Shannon", "Ariana", "Kai"];
+    }
+
     FriendsS.prototype.getNames = function () {
-        return ["Aaren", "Martin", "Shannon", "Ariana", "Kai"];
+        return this.names;
+    };
+
+    FriendsS.prototype.addName = function (name) {
+        this.names.push(name);
+    };
+
+    FriendsS.prototype.addAsyncName = function (name) {
+        var that = this;
+
+        setTimeout(function () {
+            that.names.push(name);
+        }, 1000);
     };
 
     app.DisplayComponent = ng.core
@@ -14,22 +29,22 @@
         })
         .View({
             directives: [ng.common.NgFor],
-            template:
-                "<p>My name: {{ me }}" +
-                "<p>Friends:</p>" +
-                "<ul>" +
-                "<li *ngFor='#name of names'>{{ name }}</li>" +
-                "</ul>" +
-                "<button (click)='theAnswer(42)'>And the answer is...</button>"
+            templateUrl: "app/display.component.html"
         })
         .Class({
             constructor: [FriendsS, function Display(friendsSrv) {
+                this.friendsSrv = friendsSrv;
+
                 this.me = "Alice";
-                this.names = friendsSrv.getNames();
+                this.names = this.friendsSrv.getNames();
             }],
 
-            theAnswer: function (res) {
-                console.log(res);
+            addFriend: function (name) {
+                this.friendsSrv.addName(name);
+            },
+
+            addAsyncFriend: function (name) {
+                this.friendsSrv.addAsyncName(name);
             }
         });
 

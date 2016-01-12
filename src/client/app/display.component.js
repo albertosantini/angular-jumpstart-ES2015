@@ -29,7 +29,7 @@
             }],
 
             theAnswer: function (res) {
-                alert(res);
+                console.log(res);
             }
         });
 

@@ -16,6 +16,13 @@ Then in the folder project:
 - `npm install`
 - `npm start`
 
+## Features
+
+- Using custom components
+- Defining properties and using events in components
+- Using the Http object for Ajax calls
+- Using data binding syntax
+
 ## Resources
 
 - [Angular Quickstart](https://angular.io/docs/ts/latest/quickstart.html)

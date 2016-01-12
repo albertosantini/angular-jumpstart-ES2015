@@ -1,0 +1,7 @@
+<p>My name: {{ me }}
+<p>Friends:</p>
+<ul>
+<li *ngFor="#name of names">{{ name }}</li>
+</ul>
+<button (click)="addFriend('foo')">Add foo friend</button>
+<button (click)="addAsyncFriend('bar')">Simulate async update</button>

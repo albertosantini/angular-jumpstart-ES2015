@@ -1,7 +1,10 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <script>document.write('<base href="' + document.location + '" />');</script>
+
         <meta charset="utf-8" />
+
         <title>Angular 2 ES5 Jumpstart</title>
     </head>
 
@@ -12,7 +15,9 @@
 
         <foo></foo>
 
-        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.0-rc.0/angular.min.js"></script>
+        <my-routes></my-routes>
+
+        <script src="node_modules/angular/angular.min.js"></script>
 
         <script src="node_modules/rxjs/bundles/Rx.umd.js"></script>
         <script src="node_modules/angular2/bundles/angular2-polyfills.js"></script>
@@ -24,5 +29,7 @@
         <script src="app/boot.js"></script>
 
         <script src="app/mix-ng1-ng2.js"></script>
+
+        <script src="app/app.routes.js"></script>
     </body>
 </html>

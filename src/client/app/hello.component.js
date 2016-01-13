@@ -2,31 +2,16 @@
 
 (function (app) {
 
-    app.HttpService = ng.core
-        .Class({
-            constructor: function () {},
-            http: function () {
-                return new ng.http.Http(
-                        new ng.http.XHRBackend(
-                            new ng.http.BrowserXhr()),
-                    new ng.http.RequestOptions());
-            }
-        });
-
-}(window.app || (window.app = {})));
-
-(function (app) {
-
     app.HelloComponent = ng.core
         .Component({
             selector: "hello",
-            bindings: [app.HttpService]
+            bindings: [ng.http.HTTP_PROVIDERS]
         })
         .View({
             template: "<p>{{ greeting }} world! {{ greetingFromJSON }}</p>"
         })
         .Class({
-            constructor: [app.HttpService, function Hello(httpService) {
+            constructor: [ng.http.Http, function Hello(http) {
                 var vm = this;
 
                 vm.greeting = "Hello";
@@ -35,8 +20,7 @@
                 activate();
 
                 function activate() {
-                    var rx = httpService.http()
-                                .get("/src/client/app/greetings.json").share();
+                    var rx = http.get("/src/client/app/greetings.json").share();
 
                     rx.subscribe(function (res) {
                         var greetings = res.json();

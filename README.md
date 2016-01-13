@@ -21,6 +21,7 @@ Then in the folder project:
 - Bootstrapping the app and the components
 - Using custom components
 - Defining properties and using events in components
+- Defining routes
 - Using the Http object for Ajax calls
 - Using data binding syntax
 - Mixing Angular 1 and Angular 2

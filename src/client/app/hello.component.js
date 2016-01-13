@@ -20,7 +20,7 @@
                 activate();
 
                 function activate() {
-                    var rx = http.get("/src/client/app/greetings.json").share();
+                    var rx = http.get("app/greetings.json").share();
 
                     rx.subscribe(function (res) {
                         var greetings = res.json();

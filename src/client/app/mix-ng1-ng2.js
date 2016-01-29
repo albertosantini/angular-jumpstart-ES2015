@@ -35,7 +35,7 @@
 
     angular.module("dummy")
         .component("foo", {
-            template: "<p>{{ foo.hello }} from mix Angular 1 and Angular 2 </p>",
+            template: "<p>{{ $ctrl.hello }} from mix Angular 1 and Angular 2 </p>",
             controller: function (FooService) {
                 var vm = this;
 

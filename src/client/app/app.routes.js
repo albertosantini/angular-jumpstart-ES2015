@@ -18,7 +18,7 @@
     app.MyRoutes = ng.core
         .Component({
             selector: "my-routes",
-            bindings: [ng.router.ROUTER_PROVIDERS]
+            providers: [ng.router.ROUTER_PROVIDERS]
         })
         .View({
             directives: [ng.router.ROUTER_DIRECTIVES],

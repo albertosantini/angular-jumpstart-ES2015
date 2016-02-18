@@ -5,7 +5,7 @@
     app.HelloComponent = ng.core
         .Component({
             selector: "hello",
-            bindings: [ng.http.HTTP_PROVIDERS]
+            providers: [ng.http.HTTP_PROVIDERS]
         })
         .View({
             template: "<p>{{ greeting }} world! {{ greetingFromJSON }}</p>"

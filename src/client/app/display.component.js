@@ -25,7 +25,7 @@
     app.DisplayComponent = ng.core
         .Component({
             selector: "display",
-            bindings: [FriendsS]
+            providers: [FriendsS]
         })
         .View({
             directives: [ng.common.NgFor],

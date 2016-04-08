@@ -10,11 +10,11 @@
     "license": "MIT",
     "dependencies": {
         "angular": "~1.5.3",
-        "angular2": "~2.0.0-beta.13",
-        "rxjs": "~5.0.0-beta.4"
+        "angular2": "~2.0.0-beta.14",
+        "rxjs": "~5.0.0-beta.5"
     },
     "devDependencies": {
-        "eslint": "^2.6.0",
+        "eslint": "^2.7.0",
         "eslint-config-eslint": "~3.0.0",
         "lite-server": "~2.2.0"
     }

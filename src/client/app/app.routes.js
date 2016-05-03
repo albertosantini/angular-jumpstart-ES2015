@@ -18,10 +18,10 @@
     app.MyRoutes = ng.core
         .Component({
             selector: "my-routes",
-            providers: [ng.router.ROUTER_PROVIDERS]
+            providers: [ng.router_deprecated.ROUTER_PROVIDERS]
         })
         .View({
-            directives: [ng.router.ROUTER_DIRECTIVES],
+            directives: [ng.router_deprecated.ROUTER_DIRECTIVES],
             template: "<router-outlet></router-outlet>"
         })
         .Class({
@@ -31,7 +31,7 @@
 }(window.app || (window.app = {})));
 
 (function (app) {
-    ng.router
+    ng.router_deprecated
         .RouteConfig([
             { path: "/", component: app.View1 }
         ])(app.MyRoutes);

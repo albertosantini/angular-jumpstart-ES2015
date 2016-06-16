@@ -25,9 +25,7 @@
     app.DisplayComponent = ng.core
         .Component({
             selector: "display",
-            providers: [FriendsS]
-        })
-        .View({
+            viewProviders: [FriendsS],
             directives: [ng.common.NgFor],
             templateUrl: "app/display.component.html"
         })

@@ -18,9 +18,7 @@
     app.MyRoutes = ng.core
         .Component({
             selector: "my-routes",
-            providers: [ng.router_deprecated.ROUTER_PROVIDERS]
-        })
-        .View({
+            viewProviders: [ng.router_deprecated.ROUTER_PROVIDERS],
             directives: [ng.router_deprecated.ROUTER_DIRECTIVES],
             template: "<router-outlet></router-outlet>"
         })

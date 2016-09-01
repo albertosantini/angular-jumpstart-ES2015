@@ -2,9 +2,17 @@
 
 (function (app) {
     document.addEventListener("DOMContentLoaded", function () {
-        ng.platformBrowserDynamic.bootstrap(app.AppComponent);
-        ng.platformBrowserDynamic.bootstrap(app.DisplayComponent);
-        ng.platformBrowserDynamic.bootstrap(app.HelloComponent);
-        ng.platformBrowserDynamic.bootstrap(app.MyRoutes);
+        ng.platformBrowserDynamic
+            .platformBrowserDynamic()
+            .bootstrapModule(app.AppModule);
+        ng.platformBrowserDynamic
+            .platformBrowserDynamic()
+            .bootstrapModule(app.DisplayModule);
+        ng.platformBrowserDynamic
+            .platformBrowserDynamic()
+            .bootstrapModule(app.HelloModule);
+        ng.platformBrowserDynamic
+            .platformBrowserDynamic()
+            .bootstrapModule(app.MyRoutesModule);
     });
 }(window.app || (window.app = {})));

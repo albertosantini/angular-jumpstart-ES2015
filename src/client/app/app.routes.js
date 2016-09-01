@@ -6,32 +6,34 @@
             template: "<p>View {{ viewName }} loaded with the router</p>"
         })
         .Class({
-            constructor: [function Start() {
+            constructor: function () {
                 this.viewName = "View1";
-            }]
-
+            }
         });
 
 }(window.app || (window.app = {})));
 
 (function (app) {
-    app.MyRoutes = ng.core
+    var component = ng.core
         .Component({
             selector: "my-routes",
-            viewProviders: [ng.router_deprecated.ROUTER_PROVIDERS],
-            directives: [ng.router_deprecated.ROUTER_DIRECTIVES],
-            template: "<router-outlet></router-outlet>"
+            template: "<h1>My routes</h1><router-outlet></router-outlet>"
         })
         .Class({
             constructor: function () {}
         });
 
-}(window.app || (window.app = {})));
+    var routing = ng.router.RouterModule.forRoot([
+        { path: "", component: app.View1 }
+    ]);
 
-(function (app) {
-    ng.router_deprecated
-        .RouteConfig([
-            { path: "/", component: app.View1 }
-        ])(app.MyRoutes);
+    app.MyRoutesModule = ng.core.NgModule({
+        imports: [ng.platformBrowser.BrowserModule, routing],
+        declarations: [component, app.View1],
+        bootstrap: [component]
+    })
+    .Class({
+        constructor: function () {}
+    });
 
 }(window.app || (window.app = {})));

@@ -1,11 +1,11 @@
 "use strict";
 
 (function (app) {
+    var component;
 
-    app.HelloComponent = ng.core
+    component = ng.core
         .Component({
             selector: "hello",
-            viewProviders: [ng.http.HTTP_PROVIDERS],
             template: "<p>{{ greeting }} world! {{ greetingFromJSON }}</p>"
         })
         .Class({
@@ -13,7 +13,7 @@
                 var vm = this;
 
                 vm.greeting = "Hello";
-                vm.greetingFromJSON = "n.a";
+                vm.greetingFromJSON = "n.a.";
 
                 activate();
 
@@ -28,5 +28,14 @@
                 }
             }]
         });
+
+    app.HelloModule = ng.core.NgModule({
+        imports: [ng.platformBrowser.BrowserModule, ng.http.HttpModule],
+        declarations: [component],
+        bootstrap: [component]
+    })
+    .Class({
+        constructor: function () {}
+    });
 
 }(window.app || (window.app = {})));

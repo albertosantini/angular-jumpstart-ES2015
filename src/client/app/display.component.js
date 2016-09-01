@@ -1,6 +1,7 @@
 "use strict";
 
 (function (app) {
+    var component;
 
     function FriendsS() {
         this.names = ["Aaren", "Martin", "Shannon", "Ariana", "Kai"];
@@ -22,7 +23,7 @@
         }, 1000);
     };
 
-    app.DisplayComponent = ng.core
+    component = ng.core
         .Component({
             selector: "display",
             viewProviders: [FriendsS],
@@ -45,5 +46,15 @@
                 this.friendsSrv.addAsyncName(name);
             }
         });
+
+    app.DisplayModule = ng.core.NgModule({
+        imports: [ng.platformBrowser.BrowserModule],
+        declarations: [component],
+        bootstrap: [component]
+    })
+    .Class({
+        constructor: function () {}
+    });
+
 
 }(window.app || (window.app = {})));

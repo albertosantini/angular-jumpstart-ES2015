@@ -4,14 +4,6 @@
     angular
         .module("dummy", []);
 
-    var upgradeAdapter = new ng.upgrade.UpgradeAdapter();
-
-    angular.element(document.body).ready(function () {
-        upgradeAdapter.bootstrap(document.body, ["dummy"]);
-    });
-
-    upgradeAdapter.addProvider(ng.http.HTTP_PROVIDERS);
-
     var fooS = ng.core
             .Injectable()
             .Class({
@@ -27,7 +19,19 @@
                 }
             });
 
-    upgradeAdapter.addProvider(fooS);
+    var module2 = ng.core.NgModule({
+        imports: [ng.platformBrowser.BrowserModule, ng.http.HttpModule],
+        providers: [fooS]
+    })
+    .Class({
+        constructor: function () {}
+    });
+
+    var upgradeAdapter = new ng.upgrade.UpgradeAdapter(module2);
+
+    angular.element(document.body).ready(function () {
+        upgradeAdapter.bootstrap(document.body, ["dummy"]);
+    });
 
     angular.module("dummy")
         .factory("FooService",
@@ -35,7 +39,7 @@
 
     angular.module("dummy")
         .component("foo", {
-            template: "<p>{{ $ctrl.hello }} from mix Angular 1 and Angular 2 </p>",
+            template: "<p>{{ $ctrl.hello }} from mix Angular 1 and Angular 2</p>",
             controller: function (FooService) {
                 var vm = this;
 

@@ -1,4 +1,10 @@
 "use strict";
+(function () {
+    // fix for a regression in rx 5.0.0-beta.11
+    var obsProto = window.Rx.Observable.prototype;
+
+    obsProto._catch = obsProto.catch;
+}());
 
 (function (app) {
     app.View1 = ng.core

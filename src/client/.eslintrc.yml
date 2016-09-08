@@ -7,6 +7,7 @@ extends: "eslint"
 
 rules:
     new-cap: [2, {capIsNew: false}]
+    no-underscore-dangle: 0
     no-use-before-define: [2, "nofunc"]
     require-jsdoc: 0
     space-before-function-paren: [2, {"anonymous": "always", "named": "never"}]

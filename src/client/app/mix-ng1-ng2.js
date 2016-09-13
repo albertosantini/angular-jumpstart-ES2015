@@ -5,7 +5,6 @@
         .module("dummy", []);
 
     var fooS = ng.core
-            .Injectable()
             .Class({
                 constructor: [ng.http.Http, function FooService(http) {
                     this.http = http;

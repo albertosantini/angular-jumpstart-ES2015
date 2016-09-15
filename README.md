@@ -34,6 +34,5 @@ Then in the folder project:
 - [Writing An Angular2 Component in Today’s JavaScript (ES5)](http://gurustop.net/blog/2015/12/16/angular2-beta-javascript-component)
 - [Seed project for Angular 2 apps with statically typed build](https://github.com/mgechev/angular2-seed)
 - [Angular 2 JumpStart with TypeScript](https://github.com/DanWahlin/Angular2-JumpStart)
-- [Angular 2 for AngularJS developers](https://angularclass.com/angular-2-for-angularjs-developers/)
 - [Adding the first Angular 2 service to your Angular 1 app](http://www.codelord.net/2016/01/07/adding-the-first-angular-2-service-to-your-angular-1-app/)
 - [Angular 2 with Handcrafted Tools](http://onehungrymind.com/build-angular-2-app-es5/)

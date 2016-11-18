@@ -28,7 +28,7 @@ Then in the folder project:
 
 ## Resources and Credits
 
-- [Angular Quickstart](https://angular.io/docs/ts/latest/quickstart.html)
+- [Angular Quickstart](https://angular.io/docs/js/latest/quickstart.html)
 - [Angular 5 min Tutorial](https://angular.io/docs/ts/latest/tutorial/)
 - [Angular Cheat Sheet](https://angular.io/docs/js/latest/guide/cheatsheet.html)
 - [Writing An Angular2 Component in Today’s JavaScript (ES5)](http://gurustop.net/blog/2015/12/16/angular2-beta-javascript-component)

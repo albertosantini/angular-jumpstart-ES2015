@@ -4,31 +4,29 @@
     angular
         .module("dummy", []);
 
-    var fooS = ng.core
+    const fooS = ng.core
             .Class({
                 constructor: [ng.http.Http, function FooService(http) {
                     this.http = http;
                 }],
-                getFoo: function () {
+                getFoo() {
                     return this.http.get("/src/client/app/greetings.json").map(
-                        function (res) {
-                            return res.json();
-                        }
+                        res => res.json()
                     ).toPromise();
                 }
             });
 
-    var module2 = ng.core.NgModule({
+    const module2 = ng.core.NgModule({
         imports: [ng.platformBrowser.BrowserModule, ng.http.HttpModule],
         providers: [fooS]
     })
     .Class({
-        constructor: function () {}
+        constructor: function constructor() {}
     });
 
-    var upgradeAdapter = new ng.upgrade.UpgradeAdapter(module2);
+    const upgradeAdapter = new ng.upgrade.UpgradeAdapter(module2);
 
-    angular.element(document.body).ready(function () {
+    angular.element(document.body).ready(() => {
         upgradeAdapter.bootstrap(document.body, ["dummy"]);
     });
 
@@ -39,10 +37,10 @@
     angular.module("dummy")
         .component("foo", {
             template: "<p>{{ $ctrl.hello }} from mix Angular 1 and Angular 2</p>",
-            controller: function (FooService) {
-                var vm = this;
+            controller(FooService) {
+                const vm = this;
 
-                FooService.getFoo().then(function (foos) {
+                FooService.getFoo().then(foos => {
                     vm.hello = foos.hello;
                 });
             }

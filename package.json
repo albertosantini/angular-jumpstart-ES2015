@@ -24,7 +24,6 @@
     },
     "devDependencies": {
         "eslint": "^3.12.2",
-        "eslint-config-eslint": "~3.0.0",
         "lite-server": "~2.2.2"
     }
 }

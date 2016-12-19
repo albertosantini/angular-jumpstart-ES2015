@@ -1,7 +1,7 @@
 "use strict";
 
 (function (app) {
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", () => {
         ng.platformBrowserDynamic
             .platformBrowserDynamic()
             .bootstrapModule(app.AppModule);

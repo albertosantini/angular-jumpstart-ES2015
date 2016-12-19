@@ -6,7 +6,7 @@
             template: "<p>View {{ viewName }} loaded with the router</p>"
         })
         .Class({
-            constructor: function () {
+            constructor: function constructor() {
                 this.viewName = "View1";
             }
         });
@@ -14,16 +14,16 @@
 }(window.app || (window.app = {})));
 
 (function (app) {
-    var component = ng.core
+    const component = ng.core
         .Component({
             selector: "my-routes",
             template: "<h1>My routes</h1><router-outlet></router-outlet>"
         })
         .Class({
-            constructor: function () {}
+            constructor: function constructor() {}
         });
 
-    var routing = ng.router.RouterModule.forRoot([
+    const routing = ng.router.RouterModule.forRoot([
         { path: "", component: app.View1 }
     ]);
 
@@ -33,7 +33,7 @@
         bootstrap: [component]
     })
     .Class({
-        constructor: function () {}
+        constructor: function constructor() {}
     });
 
 }(window.app || (window.app = {})));

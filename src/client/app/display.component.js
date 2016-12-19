@@ -1,8 +1,6 @@
 "use strict";
 
 (function (app) {
-    var component;
-
     function FriendsS() {
         this.names = ["Aaren", "Martin", "Shannon", "Ariana", "Kai"];
     }
@@ -16,14 +14,12 @@
     };
 
     FriendsS.prototype.addAsyncName = function (name) {
-        var that = this;
-
-        setTimeout(function () {
-            that.names.push(name);
+        setTimeout(() => {
+            this.names.push(name);
         }, 1000);
     };
 
-    component = ng.core
+    const component = ng.core
         .Component({
             selector: "display",
             viewProviders: [FriendsS],
@@ -38,11 +34,11 @@
                 this.names = this.friendsSrv.getNames();
             }],
 
-            addFriend: function (name) {
+            addFriend(name) {
                 this.friendsSrv.addName(name);
             },
 
-            addAsyncFriend: function (name) {
+            addAsyncFriend(name) {
                 this.friendsSrv.addAsyncName(name);
             }
         });
@@ -53,7 +49,7 @@
         bootstrap: [component]
     })
     .Class({
-        constructor: function () {}
+        constructor: function constructor() {}
     });
 
 

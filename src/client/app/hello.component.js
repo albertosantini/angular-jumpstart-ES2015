@@ -1,16 +1,14 @@
 "use strict";
 
 (function (app) {
-    var component;
-
-    component = ng.core
+    const component = ng.core
         .Component({
             selector: "hello",
             template: "<p>{{ greeting }} world! {{ greetingFromJSON }}</p>"
         })
         .Class({
             constructor: [ng.http.Http, function Hello(http) {
-                var vm = this;
+                const vm = this;
 
                 vm.greeting = "Hello";
                 vm.greetingFromJSON = "n.a.";
@@ -18,10 +16,10 @@
                 activate();
 
                 function activate() {
-                    var rx = http.get("app/greetings.json").share();
+                    const rx = http.get("app/greetings.json").share();
 
-                    rx.subscribe(function (res) {
-                        var greetings = res.json();
+                    rx.subscribe(res => {
+                        const greetings = res.json();
 
                         vm.greetingFromJSON = greetings.hello;
                     });
@@ -35,7 +33,7 @@
         bootstrap: [component]
     })
     .Class({
-        constructor: function () {}
+        constructor: function constructor() {}
     });
 
 }(window.app || (window.app = {})));

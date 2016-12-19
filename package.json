@@ -18,7 +18,7 @@
         "@angular/http": "~2.3.1",
         "@angular/upgrade": "~2.3.1",
         "rxjs": "~5.0.1",
-        "zone.js": "~0.7.2",
+        "zone.js": "~0.7.3",
         "reflect-metadata": "~0.1.8",
         "angular": "~1.6.0"
     },

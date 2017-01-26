@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "repository": "git@github.com:albertosantini/angular2-es5-jumpstart.git",
     "scripts": {
-        "start": "npm run lite",
+        "start": "node server.js",
         "lite": "lite-server",
         "test": "eslint src/**/*.js"
     },
@@ -24,6 +24,6 @@
     },
     "devDependencies": {
         "eslint": "^3.14.1",
-        "lite-server": "^2.2.2"
+        "express": "^4.14.0"
     }
 }

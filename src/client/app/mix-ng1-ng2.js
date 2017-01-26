@@ -10,7 +10,7 @@
                     this.http = http;
                 }],
                 getFoo() {
-                    return this.http.get("/src/client/app/greetings.json").map(
+                    return this.http.get("app/greetings.json").map(
                         res => res.json()
                     ).toPromise();
                 }

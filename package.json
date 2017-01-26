@@ -4,8 +4,7 @@
     "repository": "git@github.com:albertosantini/angular2-es5-jumpstart.git",
     "scripts": {
         "start": "node server.js",
-        "lite": "lite-server",
-        "test": "eslint src/**/*.js"
+        "test": "eslint server.js src/**/*.js"
     },
     "license": "MIT",
     "dependencies": {

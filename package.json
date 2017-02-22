@@ -8,21 +8,21 @@
     },
     "license": "MIT",
     "dependencies": {
-        "@angular/core": "~4.0.0-beta.7",
-        "@angular/common": "~4.0.0-beta.7",
-        "@angular/compiler": "~4.0.0-beta.7",
-        "@angular/platform-browser": "~4.0.0-beta.7",
-        "@angular/platform-browser-dynamic": "~4.0.0-beta.7",
-        "@angular/router": "~4.0.0-beta.7",
-        "@angular/http": "~4.0.0-beta.7",
-        "@angular/upgrade": "~4.0.0-beta.7",
-        "rxjs": "~5.1.1",
+        "@angular/core": "~4.0.0-beta.8",
+        "@angular/common": "~4.0.0-beta.8",
+        "@angular/compiler": "~4.0.0-beta.8",
+        "@angular/platform-browser": "~4.0.0-beta.8",
+        "@angular/platform-browser-dynamic": "~4.0.0-beta.8",
+        "@angular/router": "~4.0.0-beta.8",
+        "@angular/http": "~4.0.0-beta.8",
+        "@angular/upgrade": "~4.0.0-beta.8",
+        "rxjs": "~5.2.0",
         "zone.js": "~0.7.7",
-        "reflect-metadata": "~0.1.9",
+        "reflect-metadata": "~0.1.10",
         "angular": "~1.6.2"
     },
     "devDependencies": {
-        "eslint": "^3.15.0",
+        "eslint": "^3.16.0",
         "express": "^4.14.1"
     }
 }

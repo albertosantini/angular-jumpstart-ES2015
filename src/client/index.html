@@ -25,8 +25,11 @@
 
         <script>
             // workaround for https://github.com/angular/angular/issues/14626
-            window.rxjs_observable_merge = Rx.Observable;
-            window.rxjs_operator_share = Rx.Observable.prototype;
+            Rx.Symbol.$$observable = Rx.Symbol.observable;
+            window.rxjsObservable = Rx;
+            window.rxjsSymbolObservable = Rx.Symbol;
+            window.rxjsObservableMerge = Rx.Observable;
+            window.rxjsOperatorShare = Rx.Observable.prototype;
         </script>
         <script src="node_modules/@angular/core/bundles/core.umd.min.js"></script>
         <script src="node_modules/@angular/common/bundles/common.umd.min.js"></script>

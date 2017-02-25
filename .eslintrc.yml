@@ -109,6 +109,7 @@ rules:
     object-curly-spacing: ["error", "always"]
     object-shorthand: "error"
     one-var-declaration-per-line: "error"
+    operator-linebreak: "error"
     prefer-arrow-callback: "error"
     prefer-const: "error"
     prefer-promise-reject-errors: "error"
@@ -129,6 +130,7 @@ rules:
     spaced-comment: ["error", "always", { exceptions: ["-"]}]
     strict: ["error", "global"]
     template-curly-spacing: ["error", "never"]
+    template-tag-spacing: "error"
     valid-jsdoc: ["error", {
         prefer: { "return": "returns"},
         preferType: {

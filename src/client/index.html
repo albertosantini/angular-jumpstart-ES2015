@@ -23,14 +23,6 @@
         <script src="node_modules/reflect-metadata/Reflect.js"></script>
         <script src="node_modules/zone.js/dist/zone.min.js"></script>
 
-        <script>
-            // workaround for https://github.com/angular/angular/issues/14626
-            Rx.Symbol.$$observable = Rx.Symbol.observable;
-            window.rxjsObservable = Rx;
-            window.rxjsSymbolObservable = Rx.Symbol;
-            window.rxjsObservableMerge = Rx.Observable;
-            window.rxjsOperatorShare = Rx.Observable.prototype;
-        </script>
         <script src="node_modules/@angular/core/bundles/core.umd.min.js"></script>
         <script src="node_modules/@angular/common/bundles/common.umd.min.js"></script>
         <script src="node_modules/@angular/compiler/bundles/compiler.umd.min.js"></script>

@@ -2,6 +2,8 @@
 
 (function (app) {
     document.addEventListener("DOMContentLoaded", () => {
+        ng.core.enableProdMode();
+
         ng.platformBrowserDynamic
             .platformBrowserDynamic()
             .bootstrapModule(app.AppModule);

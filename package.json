@@ -4,7 +4,8 @@
     "repository": "git@github.com:albertosantini/angular2-es5-jumpstart.git",
     "scripts": {
         "start": "node server.js",
-        "test": "eslint server.js src/**/*.js"
+        "test": "eslint server.js src/**/*.js",
+        "rollup": "rollup -c"
     },
     "license": "MIT",
     "dependencies": {
@@ -18,11 +19,15 @@
         "@angular/upgrade": "~4.0.0",
         "rxjs": "~5.2.0",
         "zone.js": "~0.8.5",
+        "core-js": "2.4.1",
         "reflect-metadata": "~0.1.10",
         "angular": "~1.6.3"
     },
     "devDependencies": {
         "eslint": "^3.18.0",
-        "express": "^4.15.2"
+        "express": "^4.15.2",
+        "rollup": "^0.41.6",
+        "rollup-plugin-commonjs": "^8.0.2",
+        "@oasisdigital/rollup-plugin-node-resolve": "^2.0.2"
     }
 }

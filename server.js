@@ -7,6 +7,7 @@ const app = express();
 
 app.use("/", express.static(path.join(__dirname, "src/client")));
 app.use("/node_modules", express.static(path.join(__dirname, "node_modules")));
+app.use("/build", express.static(path.join(__dirname, "build")));
 
 app.listen(8000, () => {
 

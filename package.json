@@ -21,14 +21,14 @@
         "zone.js": "~0.8.5",
         "core-js": "~2.4.1",
         "reflect-metadata": "~0.1.10",
-        "angular": "~1.6.3"
+        "angular": "~1.6.4"
     },
     "devDependencies": {
         "eslint": "^3.18.0",
         "express": "^4.15.2",
         "rollup": "^0.41.6",
         "rollup-plugin-commonjs": "^8.0.2",
-        "@oasisdigital/rollup-plugin-node-resolve": "^2.0.2",
+        "@oasisdigital/rollup-plugin-node-resolve": "^2.1.0",
         "uglify-js": "https://github.com/mishoo/UglifyJS2.git#harmony"
     }
 }

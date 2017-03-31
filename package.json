@@ -28,7 +28,7 @@
         "express": "^4.15.2",
         "rollup": "^0.41.6",
         "rollup-plugin-commonjs": "^8.0.2",
-        "@oasisdigital/rollup-plugin-node-resolve": "^2.1.0",
+        "@oasisdigital/rollup-plugin-node-resolve": "^2.0.2",
         "uglify-js": "https://github.com/mishoo/UglifyJS2.git#harmony"
     }
 }

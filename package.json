@@ -5,7 +5,7 @@
     "scripts": {
         "start": "node server.js",
         "test": "eslint server.js src/**/*.js",
-        "rollup": "rollup -c"
+        "rollup": "rollup -c && uglifyjs build/app.bundle.js -c -m -o build/app.bundle.min.js"
     },
     "license": "MIT",
     "dependencies": {
@@ -19,7 +19,7 @@
         "@angular/upgrade": "~4.0.1",
         "rxjs": "~5.2.0",
         "zone.js": "~0.8.5",
-        "core-js": "2.4.1",
+        "core-js": "~2.4.1",
         "reflect-metadata": "~0.1.10",
         "angular": "~1.6.3"
     },
@@ -28,6 +28,7 @@
         "express": "^4.15.2",
         "rollup": "^0.41.6",
         "rollup-plugin-commonjs": "^8.0.2",
-        "@oasisdigital/rollup-plugin-node-resolve": "^2.0.2"
+        "@oasisdigital/rollup-plugin-node-resolve": "^2.0.2",
+        "uglify-js": "https://github.com/mishoo/UglifyJS2.git#harmony"
     }
 }

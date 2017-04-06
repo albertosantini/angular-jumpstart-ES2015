@@ -1,10 +1,23 @@
-import { NgModule } from "@angular/core";
+import { NgModule, Component } from "@angular/core";
 import { BrowserModule } from "@angular/platform-browser";
 import { platformBrowserDynamic } from "@angular/platform-browser-dynamic";
 
-import "core-js/es6/reflect";
-import "core-js/es7/reflect";
+import "core-js/shim";
+import "reflect-metadata";
 import "zone.js/dist/zone";
+
+class FooComponent {
+    constructor() {
+        this.message = "Hello World";
+    }
+}
+
+FooComponent.annotations = [
+    new Component({
+        selector: "app",
+        template: "<h1>Foo Component - {{ $ctrl.message }}</h1>"
+    })
+];
 
 class AppModule {
 
@@ -13,7 +26,9 @@ class AppModule {
 
 AppModule.annotations = [
     new NgModule({
-        imports: [BrowserModule]
+        imports: [BrowserModule],
+        declarations: [FooComponent],
+        bootstrap: [FooComponent]
     })
 ];
 

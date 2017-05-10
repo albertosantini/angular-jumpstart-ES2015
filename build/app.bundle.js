@@ -11,21 +11,28 @@ function createCommonjsModule(fn, module) {
 	return module = { exports: {} }, fn(module, module.exports), module.exports;
 }
 
-var root = createCommonjsModule(function (module, exports) {
-"use strict";
-/**
- * window: browser in DOM main thread
- * self: browser in WebWorker
- * global: Node.js/other
- */
-exports.root = (typeof window == 'object' && window.window === window && window
-    || typeof self == 'object' && self.self === self && self
-    || typeof commonjsGlobal == 'object' && commonjsGlobal.global === commonjsGlobal && commonjsGlobal);
-if (!exports.root) {
-    throw new Error('RxJS could not find any global context (window, self, global)');
-}
+// CommonJS / Node have global context exposed as "global" variable.
+// We don't want to include the whole node.d.ts this this compilation unit so we'll just fake
+// the global "global" var for now.
+var __window$1 = typeof window !== 'undefined' && window;
+var __self$1 = typeof self !== 'undefined' && typeof WorkerGlobalScope !== 'undefined' &&
+    self instanceof WorkerGlobalScope && self;
+var __global$1 = typeof commonjsGlobal !== 'undefined' && commonjsGlobal;
+var _root = __window$1 || __global$1 || __self$1;
+var root_1 = _root;
+// Workaround Closure Compiler restriction: The body of a goog.module cannot use throw.
+// This is needed when used with angular/tsickle which inserts a goog.module statement.
+// Wrap in IIFE
+(function () {
+    if (!_root) {
+        throw new Error('RxJS could not find any global context (window, self, global)');
+    }
+})();
 
-});
+
+var root = {
+	root: root_1
+};
 
 function isFunction(x) {
     return typeof x === 'function';
@@ -544,15 +551,17 @@ var SafeSubscriber = (function (_super) {
         }
     };
     SafeSubscriber.prototype.complete = function () {
+        var _this = this;
         if (!this.isStopped) {
             var _parentSubscriber = this._parentSubscriber;
             if (this._complete) {
+                var wrappedComplete = function () { return _this._complete.call(_this._context); };
                 if (!_parentSubscriber.syncErrorThrowable) {
-                    this.__tryOrUnsub(this._complete);
+                    this.__tryOrUnsub(wrappedComplete);
                     this.unsubscribe();
                 }
                 else {
-                    this.__tryOrSetError(_parentSubscriber, this._complete);
+                    this.__tryOrSetError(_parentSubscriber, wrappedComplete);
                     this.unsubscribe();
                 }
             }
@@ -1810,6 +1819,7 @@ var ConnectableObservable = (function (_super) {
         this.source = source;
         this.subjectFactory = subjectFactory;
         this._refCount = 0;
+        this._isComplete = false;
     }
     ConnectableObservable.prototype._subscribe = function (subscriber) {
         return this.getSubject().subscribe(subscriber);
@@ -1824,6 +1834,7 @@ var ConnectableObservable = (function (_super) {
     ConnectableObservable.prototype.connect = function () {
         var connection = this._connection;
         if (!connection) {
+            this._isComplete = false;
             connection = this._connection = new Subscription_1.Subscription();
             connection.add(this.source
                 .subscribe(new ConnectableSubscriber(this.getSubject(), this)));
@@ -1843,15 +1854,17 @@ var ConnectableObservable = (function (_super) {
     return ConnectableObservable;
 }(Observable_1.Observable));
 var ConnectableObservable_2 = ConnectableObservable;
+var connectableProto = ConnectableObservable.prototype;
 var connectableObservableDescriptor = {
     operator: { value: null },
     _refCount: { value: 0, writable: true },
     _subject: { value: null, writable: true },
     _connection: { value: null, writable: true },
-    _subscribe: { value: ConnectableObservable.prototype._subscribe },
-    getSubject: { value: ConnectableObservable.prototype.getSubject },
-    connect: { value: ConnectableObservable.prototype.connect },
-    refCount: { value: ConnectableObservable.prototype.refCount }
+    _subscribe: { value: connectableProto._subscribe },
+    _isComplete: { value: connectableProto._isComplete, writable: true },
+    getSubject: { value: connectableProto.getSubject },
+    connect: { value: connectableProto.connect },
+    refCount: { value: connectableProto.refCount }
 };
 var ConnectableSubscriber = (function (_super) {
     __extends$8(ConnectableSubscriber, _super);
@@ -1864,6 +1877,7 @@ var ConnectableSubscriber = (function (_super) {
         _super.prototype._error.call(this, err);
     };
     ConnectableSubscriber.prototype._complete = function () {
+        this.connectable._isComplete = true;
         this._unsubscribe();
         _super.prototype._complete.call(this);
     };
@@ -2042,7 +2056,7 @@ function share() {
 var share_2 = share;
 
 /**
- * @license Angular v4.0.1
+ * @license Angular v4.1.1
  * (c) 2010-2017 Google, Inc. https://angular.io/
  * License: MIT
  */
@@ -2805,7 +2819,7 @@ class Version {
 /**
  * \@stable
  */
-const VERSION = new Version('4.0.1');
+const VERSION = new Version('4.1.1');
 
 /**
  * @license
@@ -2954,7 +2968,7 @@ class Injector {
     /**
      * Retrieves an instance from the injector based on the provided token.
      * If not found:
-     * - Throws {\@link NoProviderError} if no `notFoundValue` that is not equal to
+     * - Throws an error if no `notFoundValue` that is not equal to
      * Injector.THROW_IF_NOT_FOUND is given
      * - Returns the `notFoundValue` otherwise
      * @abstract
@@ -4989,7 +5003,7 @@ class Compiler {
      */
     compileModuleAsync(moduleType) { throw _throwError(); }
     /**
-     * Same as {\@link compileModuleSync} but also creates ComponentFactories for all components.
+     * Same as {\@link #compileModuleSync} but also creates ComponentFactories for all components.
      * @template T
      * @param {?} moduleType
      * @return {?}
@@ -4998,7 +5012,7 @@ class Compiler {
         throw _throwError();
     }
     /**
-     * Same as {\@link compileModuleAsync} but also creates ComponentFactories for all components.
+     * Same as {\@link #compileModuleAsync} but also creates ComponentFactories for all components.
      * @template T
      * @param {?} moduleType
      * @return {?}
@@ -5659,8 +5673,8 @@ class EventEmitter extends Subject_2 {
  *
  * The most common use of this service is to optimize performance when starting a work consisting of
  * one or more asynchronous tasks that don't require UI updates or error handling to be handled by
- * Angular. Such tasks can be kicked off via {\@link runOutsideAngular} and if needed, these tasks
- * can reenter the Angular zone via {\@link run}.
+ * Angular. Such tasks can be kicked off via {\@link #runOutsideAngular} and if needed, these tasks
+ * can reenter the Angular zone via {\@link #run}.
  *
  * <!-- TODO: add/fix links to:
  *   - docs explaining zones and the use of zones in Angular and change-detection
@@ -5777,7 +5791,7 @@ class NgZone {
      * the function.
      *
      * Running functions via `run` allows you to reenter Angular zone from a task that was executed
-     * outside of the Angular zone (typically started via {\@link runOutsideAngular}).
+     * outside of the Angular zone (typically started via {\@link #runOutsideAngular}).
      *
      * Any future tasks or microtasks scheduled from within this function will continue executing from
      * within the Angular zone.
@@ -5798,13 +5812,14 @@ class NgZone {
      * Executes the `fn` function synchronously in Angular's parent zone and returns value returned by
      * the function.
      *
-     * Running functions via `runOutsideAngular` allows you to escape Angular's zone and do work that
+     * Running functions via {\@link #runOutsideAngular} allows you to escape Angular's zone and do
+     * work that
      * doesn't trigger Angular change-detection or is subject to Angular's error handling.
      *
      * Any future tasks or microtasks scheduled from within this function will continue executing from
      * outside of the Angular zone.
      *
-     * Use {\@link run} to reenter the Angular zone and do work that updates the application model.
+     * Use {\@link #run} to reenter the Angular zone and do work that updates the application model.
      * @param {?} fn
      * @return {?}
      */
@@ -6231,7 +6246,7 @@ function createPlatform(injector) {
     _platform = injector.get(PlatformRef);
     const /** @type {?} */ inits = injector.get(PLATFORM_INITIALIZER, null);
     if (inits)
-        inits.forEach(init => init());
+        inits.forEach((init) => init());
     return _platform;
 }
 /**
@@ -6289,8 +6304,8 @@ function getPlatform() {
  * has exactly one platform, and services (such as reflection) which are common
  * to every Angular application running on the page are bound in its scope.
  *
- * A page's platform is initialized implicitly when {\@link bootstrap}() is called, or
- * explicitly by calling {\@link createPlatform}().
+ * A page's platform is initialized implicitly when a platform is created via a platform factory
+ * (e.g. {\@link platformBrowser}), or explicitly by calling the {\@link createPlatform} function.
  *
  * \@stable
  * @abstract
@@ -6527,8 +6542,6 @@ PlatformRef_.ctorParameters = () => [
 /**
  * A reference to an Angular application running on a page.
  *
- * For more about Angular applications, see the documentation for {\@link bootstrap}.
- *
  * \@stable
  * @abstract
  */
@@ -6756,6 +6769,10 @@ class ApplicationRef_ extends ApplicationRef {
             if (this._enforceNoNewChanges) {
                 this._views.forEach((view) => view.checkNoChanges());
             }
+        }
+        catch (e) {
+            // Attention: Don't rethrow as it could cancel subscriptions to Observables!
+            this._exceptionHandler.handleError(e);
         }
         finally {
             this._runningTick = false;
@@ -7186,7 +7203,8 @@ function registerModuleFactory(id, factory) {
  * An unmodifiable list of items that Angular keeps up to date when the state
  * of the application changes.
  *
- * The type of object that {\@link Query} and {\@link ViewQueryMetadata} provide.
+ * The type of object that {\@link ViewChildren}, {\@link ContentChildren}, and {\@link QueryList}
+ * provide.
  *
  * Implements an iterable interface, therefore it can be used in both ES6
  * javascript `for (var i of items)` loops as well as in Angular templates with
@@ -9104,7 +9122,6 @@ class DefaultKeyValueDiffer {
                 insertBefore._prev._next = null;
             }
             this._removalsHead = insertBefore;
-            this._removalsTail = insertBefore;
             for (let /** @type {?} */ record = insertBefore; record !== null; record = record._nextRemoved) {
                 if (record === this._mapHead) {
                     this._mapHead = null;
@@ -9117,6 +9134,11 @@ class DefaultKeyValueDiffer {
                 record._next = null;
             }
         }
+        // Make sure tails have no next records from previous runs
+        if (this._changesTail)
+            this._changesTail._nextChanged = null;
+        if (this._additionsTail)
+            this._additionsTail._nextAdded = null;
         return this.isDirty;
     }
     /**
@@ -9162,7 +9184,7 @@ class DefaultKeyValueDiffer {
      */
     _getOrCreateRecordForKey(key, value) {
         if (this._records.has(key)) {
-            const /** @type {?} */ record = this._records.get(key);
+            const /** @type {?} */ record = ((this._records.get(key)));
             this._maybeAddToChanges(record, value);
             const /** @type {?} */ prev = record._prev;
             const /** @type {?} */ next = record._next;
@@ -9204,7 +9226,7 @@ class DefaultKeyValueDiffer {
             }
             this._changesHead = this._changesTail = null;
             this._additionsHead = this._additionsTail = null;
-            this._removalsHead = this._removalsTail = null;
+            this._removalsHead = null;
         }
     }
     /**
@@ -9254,22 +9276,11 @@ class DefaultKeyValueDiffer {
         const /** @type {?} */ changes = [];
         const /** @type {?} */ additions = [];
         const /** @type {?} */ removals = [];
-        let /** @type {?} */ record;
-        for (record = this._mapHead; record !== null; record = record._next) {
-            items.push(stringify(record));
-        }
-        for (record = this._previousMapHead; record !== null; record = record._nextPrevious) {
-            previous.push(stringify(record));
-        }
-        for (record = this._changesHead; record !== null; record = record._nextChanged) {
-            changes.push(stringify(record));
-        }
-        for (record = this._additionsHead; record !== null; record = record._nextAdded) {
-            additions.push(stringify(record));
-        }
-        for (record = this._removalsHead; record !== null; record = record._nextRemoved) {
-            removals.push(stringify(record));
-        }
+        this.forEachItem(r => items.push(stringify(r)));
+        this.forEachPreviousItem(r => previous.push(stringify(r)));
+        this.forEachChangedItem(r => changes.push(stringify(r)));
+        this.forEachAddedItem(r => additions.push(stringify(r)));
+        this.forEachRemovedItem(r => removals.push(stringify(r)));
         return 'map: ' + items.join(', ') + '\n' +
             'previous: ' + previous.join(', ') + '\n' +
             'additions: ' + additions.join(', ') + '\n' +
@@ -9864,7 +9875,7 @@ function resolveRendererType2(type) {
  */
 function checkBinding(view, def, bindingIdx, value) {
     const /** @type {?} */ oldValues = view.oldValues;
-    if ((view.state & 1 /* FirstCheck */) ||
+    if ((view.state & 2 /* FirstCheck */) ||
         !looseIdentical(oldValues[def.bindingIndex + bindingIdx], value)) {
         return true;
     }
@@ -9893,8 +9904,8 @@ function checkAndUpdateBinding(view, def, bindingIdx, value) {
  */
 function checkBindingNoChanges(view, def, bindingIdx, value) {
     const /** @type {?} */ oldValue = view.oldValues[def.bindingIndex + bindingIdx];
-    if ((view.state & 1 /* FirstCheck */) || !devModeEqual(oldValue, value)) {
-        throw expressionChangedAfterItHasBeenCheckedError(Services.createDebugContext(view, def.index), oldValue, value, (view.state & 1 /* FirstCheck */) !== 0);
+    if ((view.state & 1 /* BeforeFirstCheck */) || !devModeEqual(oldValue, value)) {
+        throw expressionChangedAfterItHasBeenCheckedError(Services.createDebugContext(view, def.index), oldValue, value, (view.state & 1 /* BeforeFirstCheck */) !== 0);
     }
 }
 /**
@@ -9905,7 +9916,7 @@ function markParentViewsForCheck(view) {
     let /** @type {?} */ currView = view;
     while (currView) {
         if (currView.def.flags & 2 /* OnPush */) {
-            currView.state |= 2 /* ChecksEnabled */;
+            currView.state |= 8 /* ChecksEnabled */;
         }
         currView = currView.viewContainerParent || currView.parent;
     }
@@ -10508,7 +10519,15 @@ function listenToElementOutputs(view, compView, def, el) {
  * @return {?}
  */
 function renderEventHandlerClosure(view, index, eventName) {
-    return (event) => dispatchEvent(view, index, eventName, event);
+    return (event) => {
+        try {
+            return dispatchEvent(view, index, eventName, event);
+        }
+        catch (e) {
+            // Attention: Don't rethrow, to keep in sync with directive events.
+            view.root.errorHandler.handleError(e);
+        }
+    };
 }
 /**
  * @param {?} view
@@ -10645,7 +10664,7 @@ function setElementClass(view, renderNode$$1, name, value) {
  * @return {?}
  */
 function setElementStyle(view, binding, renderNode$$1, name, value) {
-    let /** @type {?} */ renderValue = view.root.sanitizer.sanitize(SecurityContext.STYLE, value);
+    let /** @type {?} */ renderValue = view.root.sanitizer.sanitize(SecurityContext.STYLE, /** @type {?} */ (value));
     if (renderValue != null) {
         renderValue = renderValue.toString();
         const /** @type {?} */ unit = binding.suffix;
@@ -10917,8 +10936,9 @@ class ComponentFactory_ extends ComponentFactory {
      */
     get inputs() {
         const /** @type {?} */ inputsArr = [];
-        for (let /** @type {?} */ propName in this._inputs) {
-            const /** @type {?} */ templateName = this._inputs[propName];
+        const /** @type {?} */ inputs = ((this._inputs));
+        for (let /** @type {?} */ propName in inputs) {
+            const /** @type {?} */ templateName = inputs[propName];
             inputsArr.push({ propName, templateName });
         }
         return inputsArr;
@@ -10950,7 +10970,9 @@ class ComponentFactory_ extends ComponentFactory {
         const /** @type {?} */ componentNodeIndex = ((((viewDef.nodes[0].element)).componentProvider)).index;
         const /** @type {?} */ view = Services.createRootView(injector, projectableNodes || [], rootSelectorOrNode, viewDef, ngModule, EMPTY_CONTEXT);
         const /** @type {?} */ component = asProviderData(view, componentNodeIndex).instance;
-        view.renderer.setAttribute(asElementData(view, 0).renderElement, 'ng-version', VERSION.full);
+        if (rootSelectorOrNode) {
+            view.renderer.setAttribute(asElementData(view, 0).renderElement, 'ng-version', VERSION.full);
+        }
         return new ComponentRef_(view, new ViewRef_(view), component);
     }
 }
@@ -11183,7 +11205,7 @@ class ViewRef_ {
     /**
      * @return {?}
      */
-    get destroyed() { return (this._view.state & 8 /* Destroyed */) !== 0; }
+    get destroyed() { return (this._view.state & 16 /* Destroyed */) !== 0; }
     /**
      * @return {?}
      */
@@ -11191,7 +11213,7 @@ class ViewRef_ {
     /**
      * @return {?}
      */
-    detach() { this._view.state &= ~2 /* ChecksEnabled */; }
+    detach() { this._view.state &= ~4 /* Attached */; }
     /**
      * @return {?}
      */
@@ -11203,7 +11225,7 @@ class ViewRef_ {
     /**
      * @return {?}
      */
-    reattach() { this._view.state |= 2 /* ChecksEnabled */; }
+    reattach() { this._view.state |= 4 /* Attached */; }
     /**
      * @param {?} callback
      * @return {?}
@@ -11707,7 +11729,15 @@ function createDirectiveInstance(view, def) {
  * @return {?}
  */
 function eventHandlerClosure(view, index, eventName) {
-    return (event) => dispatchEvent(view, index, eventName, event);
+    return (event) => {
+        try {
+            return dispatchEvent(view, index, eventName, event);
+        }
+        catch (e) {
+            // Attention: Don't rethrow, as it would cancel Observable subscriptions!
+            view.root.errorHandler.handleError(e);
+        }
+    };
 }
 /**
  * @param {?} view
@@ -11773,7 +11803,7 @@ function checkAndUpdateDirectiveInline(view, def, v0, v1, v2, v3, v4, v5, v6, v7
     if (changes) {
         directive.ngOnChanges(changes);
     }
-    if ((view.state & 1 /* FirstCheck */) && (def.flags & 32768 /* OnInit */)) {
+    if ((view.state & 2 /* FirstCheck */) && (def.flags & 32768 /* OnInit */)) {
         directive.ngOnInit();
     }
     if (def.flags & 131072 /* DoCheck */) {
@@ -11801,7 +11831,7 @@ function checkAndUpdateDirectiveDynamic(view, def, values) {
     if (changes) {
         directive.ngOnChanges(changes);
     }
-    if ((view.state & 1 /* FirstCheck */) && (def.flags & 32768 /* OnInit */)) {
+    if ((view.state & 2 /* FirstCheck */) && (def.flags & 32768 /* OnInit */)) {
         directive.ngOnInit();
     }
     if (def.flags & 131072 /* DoCheck */) {
@@ -11936,6 +11966,11 @@ function resolveDep(view, elDef, allowPrivateServices, depDef, notFoundValue = I
         notFoundValue = null;
     }
     const /** @type {?} */ tokenKey$$1 = depDef.tokenKey;
+    if (tokenKey$$1 === ChangeDetectorRefTokenKey) {
+        // directives on the same element as a component should be able to control the change detector
+        // of that component as well.
+        allowPrivateServices = !!(elDef && ((elDef.element)).componentView);
+    }
     if (elDef && (depDef.flags & 1 /* SkipSelf */)) {
         allowPrivateServices = false;
         elDef = ((elDef.parent));
@@ -12026,7 +12061,7 @@ function updateProp(view, providerData, def, bindingIdx, value, changes) {
     if (def.flags & 16384 /* Component */) {
         const /** @type {?} */ compView = asElementData(view, /** @type {?} */ ((def.parent)).index).componentView;
         if (compView.def.flags & 2 /* OnPush */) {
-            compView.state |= 2 /* ChecksEnabled */;
+            compView.state |= 8 /* ChecksEnabled */;
         }
     }
     const /** @type {?} */ binding = def.bindings[bindingIdx];
@@ -12043,7 +12078,7 @@ function updateProp(view, providerData, def, bindingIdx, value, changes) {
         }
         const /** @type {?} */ binding = def.bindings[bindingIdx];
         changes[((binding.nonMinifiedName))] =
-            new SimpleChange(oldValue, value, (view.state & 1 /* FirstCheck */) !== 0);
+            new SimpleChange(oldValue, value, (view.state & 2 /* FirstCheck */) !== 0);
     }
     view.oldValues[def.bindingIndex + bindingIdx] = value;
     return changes;
@@ -12968,7 +13003,7 @@ function createView(root, renderer, parent, parentNodeDef, def) {
         viewContainerParent: null, parentNodeDef,
         context: null,
         component: null, nodes,
-        state: 1 /* FirstCheck */ | 2 /* ChecksEnabled */, root, renderer,
+        state: 13 /* CatInit */, root, renderer,
         oldValues: new Array(def.bindingCount), disposables
     };
     return view;
@@ -13091,20 +13126,26 @@ function checkNoChangesView(view) {
  * @return {?}
  */
 function checkAndUpdateView(view) {
+    if (view.state & 1 /* BeforeFirstCheck */) {
+        view.state &= ~1 /* BeforeFirstCheck */;
+        view.state |= 2 /* FirstCheck */;
+    }
+    else {
+        view.state &= ~2 /* FirstCheck */;
+    }
     Services.updateDirectives(view, 0 /* CheckAndUpdate */);
     execEmbeddedViewsAction(view, ViewAction.CheckAndUpdate);
     execQueriesAction(view, 33554432 /* TypeContentQuery */, 268435456 /* DynamicQuery */, 0 /* CheckAndUpdate */);
     callLifecycleHooksChildrenFirst(view, 1048576 /* AfterContentChecked */ |
-        (view.state & 1 /* FirstCheck */ ? 524288 /* AfterContentInit */ : 0));
+        (view.state & 2 /* FirstCheck */ ? 524288 /* AfterContentInit */ : 0));
     Services.updateRenderer(view, 0 /* CheckAndUpdate */);
     execComponentViewsAction(view, ViewAction.CheckAndUpdate);
     execQueriesAction(view, 67108864 /* TypeViewQuery */, 268435456 /* DynamicQuery */, 0 /* CheckAndUpdate */);
     callLifecycleHooksChildrenFirst(view, 4194304 /* AfterViewChecked */ |
-        (view.state & 1 /* FirstCheck */ ? 2097152 /* AfterViewInit */ : 0));
+        (view.state & 2 /* FirstCheck */ ? 2097152 /* AfterViewInit */ : 0));
     if (view.def.flags & 2 /* OnPush */) {
-        view.state &= ~2 /* ChecksEnabled */;
+        view.state &= ~8 /* ChecksEnabled */;
     }
-    view.state &= ~1 /* FirstCheck */;
 }
 /**
  * @param {?} view
@@ -13286,7 +13327,7 @@ function checkNoChangesNodeDynamic(view, nodeDef, values) {
 function checkNoChangesQuery(view, nodeDef) {
     const /** @type {?} */ queryList = asQueryList(view, nodeDef.index);
     if (queryList.dirty) {
-        throw expressionChangedAfterItHasBeenCheckedError(Services.createDebugContext(view, nodeDef.index), `Query ${ /** @type {?} */((nodeDef.query)).id} not dirty`, `Query ${ /** @type {?} */((nodeDef.query)).id} dirty`, (view.state & 1 /* FirstCheck */) !== 0);
+        throw expressionChangedAfterItHasBeenCheckedError(Services.createDebugContext(view, nodeDef.index), `Query ${ /** @type {?} */((nodeDef.query)).id} not dirty`, `Query ${ /** @type {?} */((nodeDef.query)).id} dirty`, (view.state & 1 /* BeforeFirstCheck */) !== 0);
     }
 }
 /**
@@ -13294,7 +13335,7 @@ function checkNoChangesQuery(view, nodeDef) {
  * @return {?}
  */
 function destroyView(view) {
-    if (view.state & 8 /* Destroyed */) {
+    if (view.state & 16 /* Destroyed */) {
         return;
     }
     execEmbeddedViewsAction(view, ViewAction.Destroy);
@@ -13311,7 +13352,7 @@ function destroyView(view) {
     if (isComponentView(view)) {
         view.renderer.destroy();
     }
-    view.state |= 8 /* Destroyed */;
+    view.state |= 16 /* Destroyed */;
 }
 /**
  * @param {?} view
@@ -13398,14 +13439,14 @@ function callViewAction(view, action) {
     const /** @type {?} */ viewState = view.state;
     switch (action) {
         case ViewAction.CheckNoChanges:
-            if ((viewState & 2 /* ChecksEnabled */) &&
-                (viewState & (4 /* Errored */ | 8 /* Destroyed */)) === 0) {
+            if ((viewState & 12 /* CatDetectChanges */) === 12 /* CatDetectChanges */ &&
+                (viewState & 16 /* Destroyed */) === 0) {
                 checkNoChangesView(view);
             }
             break;
         case ViewAction.CheckAndUpdate:
-            if ((viewState & 2 /* ChecksEnabled */) &&
-                (viewState & (4 /* Errored */ | 8 /* Destroyed */)) === 0) {
+            if ((viewState & 12 /* CatDetectChanges */) === 12 /* CatDetectChanges */ &&
+                (viewState & 16 /* Destroyed */) === 0) {
                 checkAndUpdateView(view);
             }
             break;
@@ -13553,11 +13594,12 @@ function debugCreateRootView(elInjector, projectableNodes, rootSelectorOrNode, d
  */
 function createRootData(elInjector, ngModule, rendererFactory, projectableNodes, rootSelectorOrNode) {
     const /** @type {?} */ sanitizer = ngModule.injector.get(Sanitizer);
+    const /** @type {?} */ errorHandler = ngModule.injector.get(ErrorHandler);
     const /** @type {?} */ renderer = rendererFactory.createRenderer(null, null);
     return {
         ngModule,
         injector: elInjector, projectableNodes,
-        selectorOrNode: rootSelectorOrNode, sanitizer, rendererFactory, renderer
+        selectorOrNode: rootSelectorOrNode, sanitizer, rendererFactory, renderer, errorHandler
     };
 }
 /**
@@ -13676,7 +13718,7 @@ function debugHandleEvent(view, nodeIndex, eventName, event) {
  * @return {?}
  */
 function debugUpdateDirectives(view, checkType) {
-    if (view.state & 8 /* Destroyed */) {
+    if (view.state & 16 /* Destroyed */) {
         throw viewDestroyedError(DebugAction[_currentAction]);
     }
     debugSetCurrentNode(view, nextDirectiveWithBinding(view, 0));
@@ -13710,7 +13752,7 @@ function debugUpdateDirectives(view, checkType) {
  * @return {?}
  */
 function debugUpdateRenderer(view, checkType) {
-    if (view.state & 8 /* Destroyed */) {
+    if (view.state & 16 /* Destroyed */) {
         throw viewDestroyedError(DebugAction[_currentAction]);
     }
     debugSetCurrentNode(view, nextRenderNodeWithBinding(view, 0));
@@ -14038,7 +14080,6 @@ function callWithDebugContext(action, fn, self, args) {
         if (isViewDebugError(e) || !_currentView) {
             throw e;
         }
-        _currentView.state |= 4 /* Errored */;
         throw viewWrappedDebugError(e, /** @type {?} */ ((getCurrentDebugContext())));
     }
 }
@@ -14416,7 +14457,7 @@ const LIFECYCLE_HOOKS_VALUES = [
 ];
 
 /**
- * @license Angular v4.0.1
+ * @license Angular v4.1.1
  * (c) 2010-2017 Google, Inc. https://angular.io/
  * License: MIT
  */
@@ -14434,22 +14475,18 @@ const LIFECYCLE_HOOKS_VALUES = [
  * `PlatformLocation` encapsulates all calls to DOM apis, which allows the Router to be platform
  * agnostic.
  * This means that we can have different implementation of `PlatformLocation` for the different
- * platforms
- * that angular supports. For example, the default `PlatformLocation` is {\@link
- * BrowserPlatformLocation},
- * however when you run your app in a WebWorker you use {\@link WebWorkerPlatformLocation}.
+ * platforms that angular supports. For example, `\@angular/platform-browser` provides an
+ * implementation specific to the browser environment, while `\@angular/platform-webworker` provides
+ * one suitable for use with web workers.
  *
  * The `PlatformLocation` class is used directly by all implementations of {\@link LocationStrategy}
- * when
- * they need to interact with the DOM apis like pushState, popState, etc...
+ * when they need to interact with the DOM apis like pushState, popState, etc...
  *
  * {\@link LocationStrategy} in turn is used by the {\@link Location} service which is used directly
- * by
- * the {\@link Router} in order to navigate between routes. Since all interactions between {\@link
+ * by the {\@link Router} in order to navigate between routes. Since all interactions between {\@link
  * Router} /
  * {\@link Location} / {\@link LocationStrategy} and DOM apis flow through the `PlatformLocation`
- * class
- * they are all platform independent.
+ * class they are all platform independent.
  *
  * \@stable
  * @abstract
@@ -14473,17 +14510,20 @@ class PlatformLocation {
      */
     onHashChange(fn) { }
     /**
+     * @abstract
      * @return {?}
      */
-    get pathname() { return null; }
+    pathname() { }
     /**
+     * @abstract
      * @return {?}
      */
-    get search() { return null; }
+    search() { }
     /**
+     * @abstract
      * @return {?}
      */
-    get hash() { return null; }
+    hash() { }
     /**
      * @abstract
      * @param {?} state
@@ -15264,9 +15304,6 @@ NgClass.propDecorators = {
  * * `ngComponentOutletInjector`: Optional custom {\@link Injector} that will be used as parent for
  * the Component. Defaults to the injector of the current view container.
  *
- * * `ngComponentOutletProviders`: Optional injectable objects ({\@link Provider}) that are visible
- * to the component.
- *
  * * `ngComponentOutletContent`: Optional list of projectable nodes to insert into the content
  * section of the component, if exists.
  *
@@ -15555,7 +15592,7 @@ class NgForOf {
         const /** @type {?} */ insertTuples = [];
         changes.forEachOperation((item, adjustedPreviousIndex, currentIndex) => {
             if (item.previousIndex == null) {
-                const /** @type {?} */ view = this._viewContainer.createEmbeddedView(this._template, new NgForOfContext(null, this.ngForOf, null, null), currentIndex);
+                const /** @type {?} */ view = this._viewContainer.createEmbeddedView(this._template, new NgForOfContext(/** @type {?} */ ((null)), this.ngForOf, -1, -1), currentIndex);
                 const /** @type {?} */ tuple = new RecordViewTuple(item, view);
                 insertTuples.push(tuple);
             }
@@ -15563,7 +15600,7 @@ class NgForOf {
                 this._viewContainer.remove(adjustedPreviousIndex);
             }
             else {
-                const /** @type {?} */ view = this._viewContainer.get(adjustedPreviousIndex);
+                const /** @type {?} */ view = ((this._viewContainer.get(adjustedPreviousIndex)));
                 this._viewContainer.move(view, currentIndex);
                 const /** @type {?} */ tuple = new RecordViewTuple(item, /** @type {?} */ (view));
                 insertTuples.push(tuple);
@@ -16509,7 +16546,7 @@ class AsyncPipe {
         this._latestReturnedValue = null;
         this._subscription = null;
         this._obj = null;
-        this._strategy = null;
+        this._strategy = ((null));
     }
     /**
      * @return {?}
@@ -16567,7 +16604,7 @@ class AsyncPipe {
      * @return {?}
      */
     _dispose() {
-        this._strategy.dispose(this._subscription);
+        this._strategy.dispose(/** @type {?} */ ((this._subscription)));
         this._latestValue = null;
         this._latestReturnedValue = null;
         this._subscription = null;
@@ -16718,7 +16755,7 @@ class NumberFormatter {
             style: NumberFormatStyle[style$$1].toLowerCase()
         };
         if (style$$1 == NumberFormatStyle.Currency) {
-            options.currency = currency;
+            options.currency = typeof currency == 'string' ? currency : undefined;
             options.currencyDisplay = currencyAsSymbol ? 'symbol' : 'code';
         }
         return new Intl.NumberFormat(locale, options).format(num);
@@ -16903,15 +16940,16 @@ function dateFormatter(format, date, locale) {
         parts = [];
         let /** @type {?} */ match;
         DATE_FORMATS_SPLIT.exec(format);
-        while (format) {
-            match = DATE_FORMATS_SPLIT.exec(format);
+        let /** @type {?} */ _format = format;
+        while (_format) {
+            match = DATE_FORMATS_SPLIT.exec(_format);
             if (match) {
                 parts = parts.concat(match.slice(1));
-                format = parts.pop();
+                _format = ((parts.pop()));
             }
             else {
-                parts.push(format);
-                format = null;
+                parts.push(_format);
+                _format = null;
             }
         }
         DATE_FORMATTER_CACHE.set(cacheKey, parts);
@@ -16953,7 +16991,7 @@ const _NUMBER_FORMAT_REGEXP = /^(\d+)?\.((\d+)(-(\d+))?)?$/;
  * @param {?} locale
  * @param {?} value
  * @param {?} style
- * @param {?} digits
+ * @param {?=} digits
  * @param {?=} currency
  * @param {?=} currencyAsSymbol
  * @return {?}
@@ -16966,9 +17004,9 @@ function formatNumber(pipe, locale, value, style$$1, digits, currency = null, cu
     if (typeof value !== 'number') {
         throw invalidPipeArgumentError(pipe, value);
     }
-    let /** @type {?} */ minInt;
-    let /** @type {?} */ minFraction;
-    let /** @type {?} */ maxFraction;
+    let /** @type {?} */ minInt = undefined;
+    let /** @type {?} */ minFraction = undefined;
+    let /** @type {?} */ maxFraction = undefined;
     if (style$$1 !== NumberFormatStyle.Currency) {
         // rely on Intl default for currency
         minInt = 1;
@@ -17037,7 +17075,7 @@ class DecimalPipe {
      * @param {?=} digits
      * @return {?}
      */
-    transform(value, digits = null) {
+    transform(value, digits) {
         return formatNumber(DecimalPipe, this._locale, value, NumberFormatStyle.Decimal, digits);
     }
 }
@@ -17082,7 +17120,7 @@ class PercentPipe {
      * @param {?=} digits
      * @return {?}
      */
-    transform(value, digits = null) {
+    transform(value, digits) {
         return formatNumber(PercentPipe, this._locale, value, NumberFormatStyle.Percent, digits);
     }
 }
@@ -17133,7 +17171,7 @@ class CurrencyPipe {
      * @param {?=} digits
      * @return {?}
      */
-    transform(value, currencyCode = 'USD', symbolDisplay = false, digits = null) {
+    transform(value, currencyCode = 'USD', symbolDisplay = false, digits) {
         return formatNumber(CurrencyPipe, this._locale, value, NumberFormatStyle.Currency, digits, currencyCode, symbolDisplay);
     }
 }
@@ -17667,10 +17705,10 @@ const PLATFORM_BROWSER_ID = 'browser';
 /**
  * \@stable
  */
-const VERSION$2 = new Version('4.0.1');
+const VERSION$2 = new Version('4.1.1');
 
 /**
- * @license Angular v4.0.1
+ * @license Angular v4.1.1
  * (c) 2010-2017 Google, Inc. https://angular.io/
  * License: MIT
  */
@@ -17681,7 +17719,7 @@ const VERSION$2 = new Version('4.0.1');
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-let _DOM = null;
+let _DOM = ((null));
 /**
  * @return {?}
  */
@@ -17711,7 +17749,7 @@ function setRootDomAdapter(adapter) {
  */
 class DomAdapter {
     constructor() {
-        this.resourceLoaderType = null;
+        this.resourceLoaderType = ((null));
     }
     /**
      * @abstract
@@ -19104,7 +19142,7 @@ class BrowserDomAdapter extends GenericBrowserDomAdapter {
      * @param {?=} styleValue
      * @return {?}
      */
-    hasStyle(element, styleName, styleValue = null) {
+    hasStyle(element, styleName, styleValue) {
         const /** @type {?} */ value = this.getStyle(element, styleName) || '';
         return styleValue ? value == styleValue : value.length > 0;
     }
@@ -19329,6 +19367,7 @@ class BrowserDomAdapter extends GenericBrowserDomAdapter {
         if (target === 'body') {
             return document.body;
         }
+        return null;
     }
     /**
      * @return {?}
@@ -19423,7 +19462,7 @@ let baseElement = null;
  */
 function getBaseElementHref() {
     if (!baseElement) {
-        baseElement = document.querySelector('base');
+        baseElement = ((document.querySelector('base')));
         if (!baseElement) {
             return null;
         }
@@ -19470,7 +19509,7 @@ function setValueOnPath(global, path, value) {
     const /** @type {?} */ parts = path.split('.');
     let /** @type {?} */ obj = global;
     while (parts.length > 1) {
-        const /** @type {?} */ name = parts.shift();
+        const /** @type {?} */ name = ((parts.shift()));
         if (obj.hasOwnProperty(name) && obj[name] != null) {
             obj = obj[name];
         }
@@ -19481,7 +19520,7 @@ function setValueOnPath(global, path, value) {
     if (obj === undefined || obj === null) {
         obj = {};
     }
-    obj[parts.shift()] = value;
+    obj[((parts.shift()))] = value;
 }
 
 /**
@@ -19549,7 +19588,7 @@ class BrowserPlatformLocation extends PlatformLocation {
     /**
      * @return {?}
      */
-    getBaseHrefFromDOM() { return getDOM().getBaseHref(this._doc); }
+    getBaseHrefFromDOM() { return ((getDOM().getBaseHref(this._doc))); }
     /**
      * @param {?} fn
      * @return {?}
@@ -19701,7 +19740,7 @@ class Meta {
         if (!tag)
             return null;
         selector = selector || this._parseSelector(tag);
-        const /** @type {?} */ meta = this.getTag(selector);
+        const /** @type {?} */ meta = ((this.getTag(selector)));
         if (meta) {
             return this._setMetaElementAttributes(tag, meta);
         }
@@ -19711,7 +19750,7 @@ class Meta {
      * @param {?} attrSelector
      * @return {?}
      */
-    removeTag(attrSelector) { this.removeTagElement(this.getTag(attrSelector)); }
+    removeTag(attrSelector) { this.removeTagElement(/** @type {?} */ ((this.getTag(attrSelector)))); }
     /**
      * @param {?} meta
      * @return {?}
@@ -19729,7 +19768,7 @@ class Meta {
     _getOrCreateElement(meta, forceCreation = false) {
         if (!forceCreation) {
             const /** @type {?} */ selector = this._parseSelector(meta);
-            const /** @type {?} */ elem = this.getTag(selector);
+            const /** @type {?} */ elem = ((this.getTag(selector)));
             // It's allowed to have multiple elements with the same name so it's not enough to
             // just check that element with the same name already present on the page. We also need to
             // check if element has tag attributes
@@ -20863,7 +20902,7 @@ class KeyEventsPlugin extends EventManagerPlugin {
      * @return {?}
      */
     addEventListener(element, eventName, handler) {
-        const /** @type {?} */ parsedEvent = KeyEventsPlugin.parseEventName(eventName);
+        const /** @type {?} */ parsedEvent = ((KeyEventsPlugin.parseEventName(eventName)));
         const /** @type {?} */ outsideHandler = KeyEventsPlugin.eventCallback(parsedEvent['fullKey'], handler, this.manager.getZone());
         return this.manager.getZone().runOutsideAngular(() => {
             return getDOM().onAndCancel(element, parsedEvent['domEventName'], outsideHandler);
@@ -20879,7 +20918,7 @@ class KeyEventsPlugin extends EventManagerPlugin {
         if ((parts.length === 0) || !(domEventName === 'keydown' || domEventName === 'keyup')) {
             return null;
         }
-        const /** @type {?} */ key = KeyEventsPlugin._normalizeKey(parts.pop());
+        const /** @type {?} */ key = KeyEventsPlugin._normalizeKey(/** @type {?} */ ((parts.pop())));
         let /** @type {?} */ fullKey = '';
         MODIFIER_KEYS.forEach(modifierName => {
             const /** @type {?} */ index = parts.indexOf(modifierName);
@@ -21029,7 +21068,7 @@ function sanitizeSrcset(srcset) {
 /** A <body> element that can be safely used to parse untrusted HTML. Lazily initialized below. */
 let inertElement = null;
 /** Lazily initialized to make sure the DOM adapter gets set before use. */
-let DOM = null;
+let DOM = ((null));
 /**
  * Returns an HTML element that is guaranteed to not execute code when creating elements in it.
  * @return {?}
@@ -21131,20 +21170,20 @@ class SanitizingHtmlSerializer {
         // This cannot use a TreeWalker, as it has to run on Angular's various DOM adapters.
         // However this code never accesses properties off of `document` before deleting its contents
         // again, so it shouldn't be vulnerable to DOM clobbering.
-        let /** @type {?} */ current = el.firstChild;
+        let /** @type {?} */ current = ((el.firstChild));
         while (current) {
             if (DOM.isElementNode(current)) {
                 this.startElement(/** @type {?} */ (current));
             }
             else if (DOM.isTextNode(current)) {
-                this.chars(DOM.nodeValue(current));
+                this.chars(/** @type {?} */ ((DOM.nodeValue(current))));
             }
             else {
                 // Strip non-element, non-text nodes.
                 this.sanitizedSomething = true;
             }
             if (DOM.firstChild(current)) {
-                current = DOM.firstChild(current);
+                current = ((DOM.firstChild(current)));
                 continue;
             }
             while (current) {
@@ -21152,12 +21191,12 @@ class SanitizingHtmlSerializer {
                 if (DOM.isElementNode(current)) {
                     this.endElement(/** @type {?} */ (current));
                 }
-                let /** @type {?} */ next = checkClobberedElement(current, DOM.nextSibling(current));
+                let /** @type {?} */ next = checkClobberedElement(current, /** @type {?} */ ((DOM.nextSibling(current))));
                 if (next) {
                     current = next;
                     break;
                 }
-                current = checkClobberedElement(current, DOM.parentElement(current));
+                current = checkClobberedElement(current, /** @type {?} */ ((DOM.parentElement(current))));
             }
         }
         return this.buf.join('');
@@ -21534,7 +21573,7 @@ class DomSanitizerImpl extends DomSanitizer {
             return null;
         switch (ctx) {
             case SecurityContext.NONE:
-                return value;
+                return (value);
             case SecurityContext.HTML:
                 if (value instanceof SafeHtmlImpl)
                     return value.changingThisBreaksApplicationSecurity;
@@ -21544,7 +21583,7 @@ class DomSanitizerImpl extends DomSanitizer {
                 if (value instanceof SafeStyleImpl)
                     return value.changingThisBreaksApplicationSecurity;
                 this.checkNotSafeValue(value, 'Style');
-                return sanitizeStyle(value);
+                return sanitizeStyle(/** @type {?} */ (value));
             case SecurityContext.SCRIPT:
                 if (value instanceof SafeScriptImpl)
                     return value.changingThisBreaksApplicationSecurity;
@@ -21802,10 +21841,10 @@ BrowserModule.ctorParameters = () => [
 /**
  * \@stable
  */
-const VERSION$1 = new Version('4.0.1');
+const VERSION$1 = new Version('4.1.1');
 
 /**
- * @license Angular v4.0.1
+ * @license Angular v4.1.1
  * (c) 2010-2017 Google, Inc. https://angular.io/
  * License: MIT
  */
@@ -21824,7 +21863,7 @@ const VERSION$1 = new Version('4.0.1');
 /**
  * \@stable
  */
-const VERSION$4 = new Version('4.0.1');
+const VERSION$4 = new Version('4.1.1');
 
 /**
  * @license
@@ -22254,7 +22293,7 @@ PropertyBindingType[PropertyBindingType.Animation] = "Animation";
 function templateVisitAll(visitor, asts, context = null) {
     const /** @type {?} */ result = [];
     const /** @type {?} */ visit = visitor.visit ?
-        (ast) => visitor.visit(ast, context) || ast.visit(visitor, context) :
+        (ast) => ((visitor.visit))(ast, context) || ast.visit(visitor, context) :
         (ast) => ast.visit(visitor, context);
     asts.forEach(ast => {
         const /** @type {?} */ astResult = visit(ast);
@@ -22339,6 +22378,27 @@ function splitNsName(elementName) {
     return [elementName.slice(1, colonIndex), elementName.slice(colonIndex + 1)];
 }
 /**
+ * @param {?} tagName
+ * @return {?}
+ */
+function isNgContainer(tagName) {
+    return splitNsName(tagName)[1] === 'ng-container';
+}
+/**
+ * @param {?} tagName
+ * @return {?}
+ */
+function isNgContent(tagName) {
+    return splitNsName(tagName)[1] === 'ng-content';
+}
+/**
+ * @param {?} tagName
+ * @return {?}
+ */
+function isNgTemplate(tagName) {
+    return splitNsName(tagName)[1] === 'ng-template';
+}
+/**
  * @param {?} fullName
  * @return {?}
  */
@@ -22356,7 +22416,8 @@ function mergeNsAndName(prefix, localName) {
 // see http://www.w3.org/TR/html51/syntax.html#named-character-references
 // see https://html.spec.whatwg.org/multipage/entities.json
 // This list is not exhaustive to keep the compiler footprint low.
-// The `&#123;` / `&#x1ab;` syntax should be used when the named character reference does not exist.
+// The `&#123;` / `&#x1ab;` syntax should be used when the named character reference does not
+// exist.
 const NAMED_ENTITIES = {
     'Aacute': '\u00C1',
     'aacute': '\u00E1',
@@ -22638,7 +22699,7 @@ class HtmlTagDefinition {
             this.parentToAdd = requiredParents[0];
             requiredParents.forEach(tagName => this.requiredParents[tagName] = true);
         }
-        this.implicitNamespacePrefix = implicitNamespacePrefix;
+        this.implicitNamespacePrefix = implicitNamespacePrefix || null;
         this.contentType = contentType;
         this.ignoreFirstLf = ignoreFirstLf;
     }
@@ -22900,7 +22961,7 @@ class SelectorMatcher {
      * @return {?}
      */
     addSelectables(cssSelectors, callbackCtxt) {
-        let /** @type {?} */ listContext = null;
+        let /** @type {?} */ listContext = ((null));
         if (cssSelectors.length > 1) {
             listContext = new SelectorListContext(cssSelectors);
             this._listContexts.push(listContext);
@@ -23005,7 +23066,7 @@ class SelectorMatcher {
      */
     match(cssSelector, matchedCallback) {
         let /** @type {?} */ result = false;
-        const /** @type {?} */ element = cssSelector.element;
+        const /** @type {?} */ element = ((cssSelector.element));
         const /** @type {?} */ classNames = cssSelector.classNames;
         const /** @type {?} */ attrs = cssSelector.attrs;
         for (let /** @type {?} */ i = 0; i < this._listContexts.length; i++) {
@@ -23028,14 +23089,14 @@ class SelectorMatcher {
             for (let /** @type {?} */ i = 0; i < attrs.length; i += 2) {
                 const /** @type {?} */ name = attrs[i];
                 const /** @type {?} */ value = attrs[i + 1];
-                const /** @type {?} */ terminalValuesMap = this._attrValueMap.get(name);
+                const /** @type {?} */ terminalValuesMap = ((this._attrValueMap.get(name)));
                 if (value) {
                     result =
                         this._matchTerminal(terminalValuesMap, '', cssSelector, matchedCallback) || result;
                 }
                 result =
                     this._matchTerminal(terminalValuesMap, value, cssSelector, matchedCallback) || result;
-                const /** @type {?} */ partialValuesMap = this._attrValuePartialMap.get(name);
+                const /** @type {?} */ partialValuesMap = ((this._attrValuePartialMap.get(name)));
                 if (value) {
                     result = this._matchPartial(partialValuesMap, '', cssSelector, matchedCallback) || result;
                 }
@@ -23058,7 +23119,7 @@ class SelectorMatcher {
             return false;
         }
         let /** @type {?} */ selectables = map.get(name) || [];
-        const /** @type {?} */ starSelectables = map.get('*');
+        const /** @type {?} */ starSelectables = ((map.get('*')));
         if (starSelectables) {
             selectables = selectables.concat(starSelectables);
         }
@@ -23204,6 +23265,21 @@ function visitValue(value, visitor, context) {
         return visitor.visitPrimitive(value, context);
     }
     return visitor.visitOther(value, context);
+}
+/**
+ * @param {?} val
+ * @return {?}
+ */
+function isDefined(val) {
+    return val !== null && val !== undefined;
+}
+/**
+ * @template T
+ * @param {?} val
+ * @return {?}
+ */
+function noUndefined(val) {
+    return val === undefined ? ((null)) : val;
 }
 class ValueTransformer {
     /**
@@ -23430,7 +23506,7 @@ class CompileStylesheetMetadata {
      * @param {?=} __0
      */
     constructor({ moduleUrl, styles, styleUrls } = {}) {
-        this.moduleUrl = moduleUrl;
+        this.moduleUrl = moduleUrl || null;
         this.styles = _normalizeArray(styles);
         this.styleUrls = _normalizeArray(styleUrls);
     }
@@ -23440,9 +23516,9 @@ class CompileStylesheetMetadata {
  */
 class CompileTemplateMetadata {
     /**
-     * @param {?=} __0
+     * @param {?} __0
      */
-    constructor({ encapsulation, template, templateUrl, styles, styleUrls, externalStylesheets, animations, ngContentSelectors, interpolation, isInline } = {}) {
+    constructor({ encapsulation, template, templateUrl, styles, styleUrls, externalStylesheets, animations, ngContentSelectors, interpolation, isInline }) {
         this.encapsulation = encapsulation;
         this.template = template;
         this.templateUrl = templateUrl;
@@ -23473,10 +23549,10 @@ class CompileTemplateMetadata {
  */
 class CompileDirectiveMetadata {
     /**
-     * @param {?=} __0
+     * @param {?} __0
      * @return {?}
      */
-    static create({ isHost, type, isComponent, selector, exportAs, changeDetection, inputs, outputs, host, providers, viewProviders, queries, viewQueries, entryComponents, template, componentViewType, rendererType, componentFactory } = {}) {
+    static create({ isHost, type, isComponent, selector, exportAs, changeDetection, inputs, outputs, host, providers, viewProviders, queries, viewQueries, entryComponents, template, componentViewType, rendererType, componentFactory }) {
         const /** @type {?} */ hostListeners = {};
         const /** @type {?} */ hostProperties = {};
         const /** @type {?} */ hostAttributes = {};
@@ -23534,9 +23610,9 @@ class CompileDirectiveMetadata {
         });
     }
     /**
-     * @param {?=} __0
+     * @param {?} __0
      */
-    constructor({ isHost, type, isComponent, selector, exportAs, changeDetection, inputs, outputs, hostListeners, hostProperties, hostAttributes, providers, viewProviders, queries, viewQueries, entryComponents, template, componentViewType, rendererType, componentFactory } = {}) {
+    constructor({ isHost, type, isComponent, selector, exportAs, changeDetection, inputs, outputs, hostListeners, hostProperties, hostAttributes, providers, viewProviders, queries, viewQueries, entryComponents, template, componentViewType, rendererType, componentFactory }) {
         this.isHost = !!isHost;
         this.type = type;
         this.isComponent = isComponent;
@@ -23594,7 +23670,7 @@ class CompileDirectiveMetadata {
  * @return {?}
  */
 function createHostComponentMeta(hostTypeReference, compMeta, hostViewType) {
-    const /** @type {?} */ template = CssSelector.parse(compMeta.selector)[0].getMatchingElementTemplate();
+    const /** @type {?} */ template = CssSelector.parse(/** @type {?} */ ((compMeta.selector)))[0].getMatchingElementTemplate();
     return CompileDirectiveMetadata.create({
         isHost: true,
         type: { reference: hostTypeReference, diDeps: [], lifecycleHooks: [] },
@@ -23607,7 +23683,10 @@ function createHostComponentMeta(hostTypeReference, compMeta, hostViewType) {
             ngContentSelectors: [],
             animations: [],
             isInline: true,
+            externalStylesheets: [],
+            interpolation: null
         }),
+        exportAs: null,
         changeDetection: ChangeDetectionStrategy.Default,
         inputs: [],
         outputs: [],
@@ -23619,14 +23698,16 @@ function createHostComponentMeta(hostTypeReference, compMeta, hostViewType) {
         queries: [],
         viewQueries: [],
         componentViewType: hostViewType,
-        rendererType: { id: '__Host__', encapsulation: ViewEncapsulation.None, styles: [], data: {} }
+        rendererType: { id: '__Host__', encapsulation: ViewEncapsulation.None, styles: [], data: {} },
+        entryComponents: [],
+        componentFactory: null
     });
 }
 class CompilePipeMetadata {
     /**
-     * @param {?=} __0
+     * @param {?} __0
      */
-    constructor({ type, name, pure } = {}) {
+    constructor({ type, name, pure }) {
         this.type = type;
         this.name = name;
         this.pure = !!pure;
@@ -23648,10 +23729,10 @@ class CompilePipeMetadata {
  */
 class CompileNgModuleMetadata {
     /**
-     * @param {?=} __0
+     * @param {?} __0
      */
-    constructor({ type, providers, declaredDirectives, exportedDirectives, declaredPipes, exportedPipes, entryComponents, bootstrapComponents, importedModules, exportedModules, schemas, transitiveModule, id } = {}) {
-        this.type = type;
+    constructor({ type, providers, declaredDirectives, exportedDirectives, declaredPipes, exportedPipes, entryComponents, bootstrapComponents, importedModules, exportedModules, schemas, transitiveModule, id }) {
+        this.type = type || null;
         this.declaredDirectives = _normalizeArray(declaredDirectives);
         this.exportedDirectives = _normalizeArray(exportedDirectives);
         this.declaredPipes = _normalizeArray(declaredPipes);
@@ -23662,21 +23743,22 @@ class CompileNgModuleMetadata {
         this.importedModules = _normalizeArray(importedModules);
         this.exportedModules = _normalizeArray(exportedModules);
         this.schemas = _normalizeArray(schemas);
-        this.id = id;
-        this.transitiveModule = transitiveModule;
+        this.id = id || null;
+        this.transitiveModule = transitiveModule || null;
     }
     /**
      * @return {?}
      */
     toSummary() {
+        const /** @type {?} */ module = ((this.transitiveModule));
         return {
             summaryKind: CompileSummaryKind.NgModule,
             type: this.type,
-            entryComponents: this.transitiveModule.entryComponents,
-            providers: this.transitiveModule.providers,
-            modules: this.transitiveModule.modules,
-            exportedDirectives: this.transitiveModule.exportedDirectives,
-            exportedPipes: this.transitiveModule.exportedPipes
+            entryComponents: module.entryComponents,
+            providers: module.providers,
+            modules: module.modules,
+            exportedDirectives: module.exportedDirectives,
+            exportedPipes: module.exportedPipes
         };
     }
 }
@@ -23779,11 +23861,11 @@ class ProviderMeta {
      */
     constructor(token, { useClass, useValue, useExisting, useFactory, deps, multi }) {
         this.token = token;
-        this.useClass = useClass;
+        this.useClass = useClass || null;
         this.useValue = useValue;
         this.useExisting = useExisting;
-        this.useFactory = useFactory;
-        this.dependencies = deps;
+        this.useFactory = useFactory || null;
+        this.dependencies = deps || null;
         this.multi = !!multi;
     }
 }
@@ -23826,7 +23908,7 @@ function templateSourceUrl(ngModuleType, compMeta, templateMeta) {
         }
     }
     else {
-        url = templateMeta.templateUrl;
+        url = ((templateMeta.templateUrl));
     }
     // always prepend ng:// to make angular resources easy to find and not clobber
     // user resources.
@@ -23838,7 +23920,7 @@ function templateSourceUrl(ngModuleType, compMeta, templateMeta) {
  * @return {?}
  */
 function sharedStylesheetJitUrl(meta, id) {
-    const /** @type {?} */ pathParts = meta.moduleUrl.split(/\/\\/g);
+    const /** @type {?} */ pathParts = ((meta.moduleUrl)).split(/\/\\/g);
     const /** @type {?} */ baseName = pathParts[pathParts.length - 1];
     return sourceUrl(`css/${id}${baseName}.ngstyle.js`);
 }
@@ -23871,8 +23953,8 @@ class CompilerConfig {
      */
     constructor({ defaultEncapsulation = ViewEncapsulation.Emulated, useJit = true, missingTranslation, enableLegacyTemplate } = {}) {
         this.defaultEncapsulation = defaultEncapsulation;
-        this.useJit = useJit;
-        this.missingTranslation = missingTranslation;
+        this.useJit = !!useJit;
+        this.missingTranslation = missingTranslation || null;
         this.enableLegacyTemplate = enableLegacyTemplate !== false;
     }
 }
@@ -24413,7 +24495,7 @@ class RecursiveAstVisitor {
      * @return {?}
      */
     visitFunctionCall(ast, context) {
-        ast.target.visit(this);
+        ((ast.target)).visit(this);
         this.visitAll(ast.args, context);
         return null;
     }
@@ -24612,7 +24694,7 @@ class AstTransformer {
      * @return {?}
      */
     visitFunctionCall(ast, context) {
-        return new FunctionCall(ast.span, ast.target.visit(this), this.visitAll(ast.args));
+        return new FunctionCall(ast.span, /** @type {?} */ ((ast.target)).visit(this), this.visitAll(ast.args));
     }
     /**
      * @param {?} ast
@@ -25863,7 +25945,7 @@ class _ParseAST {
                 this.error('Cannot have a pipe in an action expression');
             }
             do {
-                const /** @type {?} */ name = this.expectIdentifierOrKeyword();
+                const /** @type {?} */ name = ((this.expectIdentifierOrKeyword()));
                 const /** @type {?} */ args = [];
                 while (this.optionalCharacter($COLON)) {
                     args.push(this.parseExpression());
@@ -26159,7 +26241,7 @@ class _ParseAST {
         if (!this.optionalCharacter($RBRACE)) {
             this.rbracesExpected++;
             do {
-                const /** @type {?} */ key = this.expectIdentifierOrKeywordOrString();
+                const /** @type {?} */ key = ((this.expectIdentifierOrKeywordOrString()));
                 keys.push(key);
                 this.expectCharacter($COLON);
                 values.push(this.parsePipe());
@@ -26176,7 +26258,7 @@ class _ParseAST {
      */
     parseAccessMemberOrMethodCall(receiver, isSafe = false) {
         const /** @type {?} */ start = receiver.span.start;
-        const /** @type {?} */ id = this.expectIdentifierOrKeyword();
+        const /** @type {?} */ id = ((this.expectIdentifierOrKeyword()));
         if (this.optionalCharacter($LPAREN)) {
             this.rparensExpected++;
             const /** @type {?} */ args = this.parseCallArguments();
@@ -26244,7 +26326,7 @@ class _ParseAST {
      */
     parseTemplateBindings() {
         const /** @type {?} */ bindings = [];
-        let /** @type {?} */ prefix = null;
+        let /** @type {?} */ prefix = ((null));
         const /** @type {?} */ warnings = [];
         while (this.index < this.tokens.length) {
             const /** @type {?} */ start = this.inputIndex;
@@ -26263,8 +26345,8 @@ class _ParseAST {
                 }
             }
             this.optionalCharacter($COLON);
-            let /** @type {?} */ name = null;
-            let /** @type {?} */ expression = null;
+            let /** @type {?} */ name = ((null));
+            let /** @type {?} */ expression = ((null));
             if (keyIsVar) {
                 if (this.optionalOperator('=')) {
                     name = this.expectTemplateBindingKey();
@@ -26291,7 +26373,7 @@ class _ParseAST {
                 const /** @type {?} */ letStart = this.inputIndex;
                 this.advance(); // consume `as`
                 const /** @type {?} */ letName = this.expectTemplateBindingKey(); // read local var name
-                bindings.push(new TemplateBinding(this.span(letStart), letName, true, key, null));
+                bindings.push(new TemplateBinding(this.span(letStart), letName, true, key, /** @type {?} */ ((null))));
             }
             if (!this.optionalCharacter($SEMICOLON)) {
                 this.optionalCharacter($COMMA);
@@ -26328,7 +26410,7 @@ class _ParseAST {
             (this.rbracesExpected <= 0 || !n.isCharacter($RBRACE)) &&
             (this.rbracketsExpected <= 0 || !n.isCharacter($RBRACKET))) {
             if (this.next.isError()) {
-                this.errors.push(new ParserError(this.next.toString(), this.input, this.locationText(), this.location));
+                this.errors.push(new ParserError(/** @type {?} */ ((this.next.toString())), this.input, this.locationText(), this.location));
             }
             this.advance();
             n = this.next;
@@ -26639,7 +26721,7 @@ function typeSourceSpan(kind, type) {
     const /** @type {?} */ sourceFileName = moduleUrl != null ? `in ${kind} ${identifierName(type)} in ${moduleUrl}` :
         `in ${kind} ${identifierName(type)}`;
     const /** @type {?} */ sourceFile = new ParseSourceFile('', sourceFileName);
-    return new ParseSourceSpan(new ParseLocation(sourceFile, null, null, null), new ParseLocation(sourceFile, null, null, null));
+    return new ParseSourceSpan(new ParseLocation(sourceFile, -1, -1, -1), new ParseLocation(sourceFile, -1, -1, -1));
 }
 
 /**
@@ -26735,10 +26817,10 @@ class Element$1 {
      * @param {?} attrs
      * @param {?} children
      * @param {?} sourceSpan
-     * @param {?} startSourceSpan
-     * @param {?} endSourceSpan
+     * @param {?=} startSourceSpan
+     * @param {?=} endSourceSpan
      */
-    constructor(name, attrs, children, sourceSpan, startSourceSpan, endSourceSpan) {
+    constructor(name, attrs, children, sourceSpan, startSourceSpan = null, endSourceSpan = null) {
         this.name = name;
         this.attrs = attrs;
         this.children = children;
@@ -26778,7 +26860,7 @@ class Comment {
 function visitAll(visitor, nodes, context = null) {
     const /** @type {?} */ result = [];
     const /** @type {?} */ visit = visitor.visit ?
-        (ast) => visitor.visit(ast, context) || ast.visit(visitor, context) :
+        (ast) => ((visitor.visit))(ast, context) || ast.visit(visitor, context) :
         (ast) => ast.visit(visitor, context);
     nodes.forEach(ast => {
         const /** @type {?} */ astResult = visit(ast);
@@ -27041,8 +27123,8 @@ class _Tokenizer {
     _endToken(parts, end = this._getLocation()) {
         const /** @type {?} */ token = new Token$1(this._currentTokenType, parts, new ParseSourceSpan(this._currentTokenStart, end));
         this.tokens.push(token);
-        this._currentTokenStart = null;
-        this._currentTokenType = null;
+        this._currentTokenStart = ((null));
+        this._currentTokenType = ((null));
         return token;
     }
     /**
@@ -27055,8 +27137,8 @@ class _Tokenizer {
             msg += ` (Do you have an unescaped "{" in your template? Use "{{ '{' }}") to escape it.)`;
         }
         const /** @type {?} */ error = new TokenError(msg, this._currentTokenType, span);
-        this._currentTokenStart = null;
-        this._currentTokenType = null;
+        this._currentTokenStart = ((null));
+        this._currentTokenType = ((null));
         return new _ControlFlowError(error);
     }
     /**
@@ -27301,7 +27383,7 @@ class _Tokenizer {
      */
     _consumePrefixAndName() {
         const /** @type {?} */ nameOrPrefixStart = this._index;
-        let /** @type {?} */ prefix = null;
+        let /** @type {?} */ prefix = ((null));
         while (this._peek !== $COLON && !isPrefixEnd(this._peek)) {
             this._advance();
         }
@@ -27381,7 +27463,7 @@ class _Tokenizer {
             return this._attemptCharCode($GT);
         });
         this._beginToken(TokenType$1.TAG_CLOSE, textToken.sourceSpan.end);
-        this._endToken([null, lowercaseTagName]);
+        this._endToken([/** @type {?} */ ((null)), lowercaseTagName]);
     }
     /**
      * @param {?} start
@@ -27660,7 +27742,7 @@ function toUpperCaseCharCode(code) {
  */
 function mergeTextTokens(srcTokens) {
     const /** @type {?} */ dstTokens = [];
-    let /** @type {?} */ lastDstToken;
+    let /** @type {?} */ lastDstToken = undefined;
     for (let /** @type {?} */ i = 0; i < srcTokens.length; i++) {
         const /** @type {?} */ token = srcTokens[i];
         if (lastDstToken && lastDstToken.type == TokenType$1.TEXT && token.type == TokenType$1.TEXT) {
@@ -27967,7 +28049,7 @@ class _TreeBuilder {
         }
         const /** @type {?} */ end = this._peek.sourceSpan.start;
         const /** @type {?} */ span = new ParseSourceSpan(startTagToken.sourceSpan.start, end);
-        const /** @type {?} */ el = new Element$1(fullName, attrs, [], span, span, null);
+        const /** @type {?} */ el = new Element$1(fullName, attrs, [], span, span, undefined);
         this._pushElement(el);
         if (selfClosing) {
             this._popElement(fullName);
@@ -28001,7 +28083,7 @@ class _TreeBuilder {
     _consumeEndTag(endTagToken) {
         const /** @type {?} */ fullName = this._getElementFullName(endTagToken.parts[0], endTagToken.parts[1], this._getParentElement());
         if (this._getParentElement()) {
-            this._getParentElement().endSourceSpan = endTagToken.sourceSpan;
+            ((this._getParentElement())).endSourceSpan = endTagToken.sourceSpan;
         }
         if (this.getTagDefinition(fullName).isVoid) {
             this._errors.push(TreeError.create(fullName, endTagToken.sourceSpan, `Void elements do not have end tags "${endTagToken.parts[1]}"`));
@@ -28036,7 +28118,7 @@ class _TreeBuilder {
         const /** @type {?} */ fullName = mergeNsAndName(attrName.parts[0], attrName.parts[1]);
         let /** @type {?} */ end = attrName.sourceSpan.end;
         let /** @type {?} */ value = '';
-        let /** @type {?} */ valueSpan;
+        let /** @type {?} */ valueSpan = ((undefined));
         if (this._peek.type === TokenType$1.ATTR_VALUE) {
             const /** @type {?} */ valueToken = this._advance();
             value = valueToken.parts[0];
@@ -28060,7 +28142,7 @@ class _TreeBuilder {
     _getParentElementSkippingContainers() {
         let /** @type {?} */ container = null;
         for (let /** @type {?} */ i = this._elementStack.length - 1; i >= 0; i--) {
-            if (this._elementStack[i].name !== 'ng-container') {
+            if (!isNgContainer(this._elementStack[i].name)) {
                 return { parent: this._elementStack[i], container };
             }
             container = this._elementStack[i];
@@ -28117,7 +28199,7 @@ class _TreeBuilder {
      */
     _getElementFullName(prefix, localName, parentElement) {
         if (prefix == null) {
-            prefix = this.getTagDefinition(localName).implicitNamespacePrefix;
+            prefix = ((this.getTagDefinition(localName).implicitNamespacePrefix));
             if (prefix == null && parentElement != null) {
                 prefix = getNsPrefix(parentElement.name);
             }
@@ -28157,6 +28239,18 @@ class Message {
         this.meaning = meaning;
         this.description = description;
         this.id = id;
+        if (nodes.length) {
+            this.sources = [{
+                    filePath: nodes[0].sourceSpan.start.file.url,
+                    startLine: nodes[0].sourceSpan.start.line + 1,
+                    startCol: nodes[0].sourceSpan.start.col + 1,
+                    endLine: nodes[nodes.length - 1].sourceSpan.end.line + 1,
+                    endCol: nodes[0].sourceSpan.start.col + 1
+                }];
+        }
+        else {
+            this.sources = [];
+        }
     }
 }
 class Text$1 {
@@ -28515,13 +28609,13 @@ class _I18nVisitor {
         });
         const /** @type {?} */ isVoid = getHtmlTagDefinition(el.name).isVoid;
         const /** @type {?} */ startPhName = this._placeholderRegistry.getStartTagPlaceholderName(el.name, attrs, isVoid);
-        this._placeholderToContent[startPhName] = el.sourceSpan.toString();
+        this._placeholderToContent[startPhName] = ((el.sourceSpan)).toString();
         let /** @type {?} */ closePhName = '';
         if (!isVoid) {
             closePhName = this._placeholderRegistry.getCloseTagPlaceholderName(el.name);
             this._placeholderToContent[closePhName] = `</${el.name}>`;
         }
-        return new TagPlaceholder(el.name, attrs, startPhName, closePhName, children, isVoid, el.sourceSpan);
+        return new TagPlaceholder(el.name, attrs, startPhName, closePhName, children, isVoid, /** @type {?} */ ((el.sourceSpan)));
     }
     /**
      * @param {?} attribute
@@ -28537,7 +28631,7 @@ class _I18nVisitor {
      * @return {?}
      */
     visitText(text, context) {
-        return this._visitTextWithInterpolation(text.value, text.sourceSpan);
+        return this._visitTextWithInterpolation(text.value, /** @type {?} */ ((text.sourceSpan)));
     }
     /**
      * @param {?} comment
@@ -28726,7 +28820,7 @@ class _Visitor {
         this._init(_VisitorMode.Merge, interpolationConfig);
         this._translations = translations;
         // Construct a single fake root element
-        const /** @type {?} */ wrapper = new Element$1('wrapper', [], nodes, null, null, null);
+        const /** @type {?} */ wrapper = new Element$1('wrapper', [], nodes, /** @type {?} */ ((undefined)), undefined, undefined);
         const /** @type {?} */ translatedNode = wrapper.visit(this, null);
         if (this._inI18nBlock) {
             this._reportError(nodes[nodes.length - 1], 'Unclosed block');
@@ -28789,7 +28883,7 @@ class _Visitor {
                     this._inI18nBlock = true;
                     this._blockStartDepth = this._depth;
                     this._blockChildren = [];
-                    this._blockMeaningAndDesc = comment.value.replace(_I18N_COMMENT_PREFIX_REGEXP, '').trim();
+                    this._blockMeaningAndDesc = ((comment.value)).replace(_I18N_COMMENT_PREFIX_REGEXP, '').trim();
                     this._openTranslatableSection(comment);
                 }
             }
@@ -28798,7 +28892,7 @@ class _Visitor {
                     if (this._depth == this._blockStartDepth) {
                         this._closeTranslatableSection(comment, this._blockChildren);
                         this._inI18nBlock = false;
-                        const /** @type {?} */ message = this._addMessage(this._blockChildren, this._blockMeaningAndDesc);
+                        const /** @type {?} */ message = ((this._addMessage(this._blockChildren, this._blockMeaningAndDesc)));
                         // merge attributes in sections
                         const /** @type {?} */ nodes = this._translateMessage(comment, message);
                         return visitAll(this, nodes);
@@ -28833,7 +28927,7 @@ class _Visitor {
         const /** @type {?} */ wasInI18nNode = this._inI18nNode;
         const /** @type {?} */ wasInImplicitNode = this._inImplicitNode;
         let /** @type {?} */ childNodes = [];
-        let /** @type {?} */ translatedChildNodes;
+        let /** @type {?} */ translatedChildNodes = ((undefined));
         // Extract:
         // - top level nodes with the (implicit) "i18n" attribute if not already in a section
         // - ICU messages
@@ -28846,7 +28940,7 @@ class _Visitor {
         if (!this._isInTranslatableSection && !this._inIcu) {
             if (i18nAttr || isTopLevelImplicit) {
                 this._inI18nNode = true;
-                const /** @type {?} */ message = this._addMessage(el.children, i18nMeta);
+                const /** @type {?} */ message = ((this._addMessage(el.children, i18nMeta)));
                 translatedChildNodes = this._translateMessage(el, message);
             }
             if (this._mode == _VisitorMode.Extract) {
@@ -28886,6 +28980,7 @@ class _Visitor {
             const /** @type {?} */ translatedAttrs = this._translateAttributes(el);
             return new Element$1(el.name, translatedAttrs, childNodes, el.sourceSpan, el.startSourceSpan, el.endSourceSpan);
         }
+        return null;
     }
     /**
      * @param {?} attribute
@@ -28906,7 +29001,7 @@ class _Visitor {
         this._inI18nNode = false;
         this._depth = 0;
         this._inIcu = false;
-        this._msgCountAtSectionStart = void 0;
+        this._msgCountAtSectionStart = undefined;
         this._errors = [];
         this._messages = [];
         this._inImplicitNode = false;
@@ -28940,7 +29035,7 @@ class _Visitor {
         if (ast.length == 0 ||
             ast.length == 1 && ast[0] instanceof Attribute$1 && !((ast[0])).value) {
             // Do not create empty messages
-            return;
+            return null;
         }
         const { meaning, description, id } = _parseMessageMeta(msgMeta);
         const /** @type {?} */ message = this._createI18nMessage(ast, meaning, description, id);
@@ -29077,7 +29172,7 @@ class _Visitor {
                 }
             }
         }
-        this._msgCountAtSectionStart = void 0;
+        this._msgCountAtSectionStart = undefined;
     }
     /**
      * @param {?} node
@@ -29085,7 +29180,7 @@ class _Visitor {
      * @return {?}
      */
     _reportError(node, msg) {
-        this._errors.push(new I18nError(node.sourceSpan, msg));
+        this._errors.push(new I18nError(/** @type {?} */ ((node.sourceSpan)), msg));
     }
 }
 /**
@@ -29093,14 +29188,14 @@ class _Visitor {
  * @return {?}
  */
 function _isOpeningComment(n) {
-    return n instanceof Comment && n.value && n.value.startsWith('i18n');
+    return !!(n instanceof Comment && n.value && n.value.startsWith('i18n'));
 }
 /**
  * @param {?} n
  * @return {?}
  */
 function _isClosingComment(n) {
-    return n instanceof Comment && n.value && n.value === '/i18n';
+    return !!(n instanceof Comment && n.value && n.value === '/i18n');
 }
 /**
  * @param {?} p
@@ -29110,7 +29205,7 @@ function _getI18nAttr(p) {
     return p.attrs.find(attr => attr.name === _I18N_ATTR) || null;
 }
 /**
- * @param {?} i18n
+ * @param {?=} i18n
  * @return {?}
  */
 function _parseMessageMeta(i18n) {
@@ -29176,7 +29271,7 @@ class XmlParser extends Parser$1 {
      * @return {?}
      */
     parse(source, url, parseExpansionForms = false) {
-        return super.parse(source, url, parseExpansionForms, null);
+        return super.parse(source, url, parseExpansionForms);
     }
 }
 
@@ -29894,6 +29989,8 @@ const _FILE_TAG = 'file';
 const _SOURCE_TAG = 'source';
 const _TARGET_TAG = 'target';
 const _UNIT_TAG = 'trans-unit';
+const _CONTEXT_GROUP_TAG = 'context-group';
+const _CONTEXT_TAG = 'context';
 class Xliff extends Serializer {
     /**
      * @param {?} messages
@@ -29904,8 +30001,14 @@ class Xliff extends Serializer {
         const /** @type {?} */ visitor = new _WriteVisitor();
         const /** @type {?} */ transUnits = [];
         messages.forEach(message => {
+            let /** @type {?} */ contextTags = [];
+            message.sources.forEach((source) => {
+                let /** @type {?} */ contextGroupTag = new Tag(_CONTEXT_GROUP_TAG, { purpose: 'location' });
+                contextGroupTag.children.push(new CR(10), new Tag(_CONTEXT_TAG, { 'context-type': 'sourcefile' }, [new Text$2(source.filePath)]), new CR(10), new Tag(_CONTEXT_TAG, { 'context-type': 'linenumber' }, [new Text$2(`${source.startLine}`)]), new CR(8));
+                contextTags.push(new CR(8), contextGroupTag);
+            });
             const /** @type {?} */ transUnit = new Tag(_UNIT_TAG, { id: message.id, datatype: 'html' });
-            transUnit.children.push(new CR(8), new Tag(_SOURCE_TAG, {}, visitor.serialize(message.nodes)), new CR(8), new Tag(_TARGET_TAG));
+            transUnit.children.push(new CR(8), new Tag(_SOURCE_TAG, {}, visitor.serialize(message.nodes)), new CR(8), new Tag(_TARGET_TAG), ...contextTags);
             if (message.description) {
                 transUnit.children.push(new CR(8), new Tag('note', { priority: '1', from: 'description' }, [new Text$2(message.description)]));
             }
@@ -29934,19 +30037,19 @@ class Xliff extends Serializer {
     load(content, url) {
         // xliff to xml nodes
         const /** @type {?} */ xliffParser = new XliffParser();
-        const { locale, mlNodesByMsgId, errors } = xliffParser.parse(content, url);
+        const { locale, msgIdToHtml, errors } = xliffParser.parse(content, url);
         // xml nodes to i18n nodes
         const /** @type {?} */ i18nNodesByMsgId = {};
         const /** @type {?} */ converter = new XmlToI18n();
-        Object.keys(mlNodesByMsgId).forEach(msgId => {
-            const { i18nNodes, errors: e } = converter.convert(mlNodesByMsgId[msgId]);
+        Object.keys(msgIdToHtml).forEach(msgId => {
+            const { i18nNodes, errors: e } = converter.convert(msgIdToHtml[msgId], url);
             errors.push(...e);
             i18nNodesByMsgId[msgId] = i18nNodes;
         });
         if (errors.length) {
             throw new Error(`xliff parse errors:\n${errors.join('\n')}`);
         }
-        return { locale, i18nNodesByMsgId };
+        return { locale: /** @type {?} */ ((locale)), i18nNodesByMsgId };
     }
     /**
      * @param {?} message
@@ -29977,16 +30080,11 @@ class _WriteVisitor {
      * @return {?}
      */
     visitIcu(icu, context) {
-        if (this._isInIcu) {
-            // nested ICU is not supported
-            throw new Error('xliff does not support nested ICU messages');
-        }
-        this._isInIcu = true;
-        // TODO(vicb): support ICU messages
-        // https://lists.oasis-open.org/archives/xliff/201201/msg00028.html
-        // http://docs.oasis-open.org/xliff/v1.2/xliff-profile-po/xliff-profile-po-1.2-cd02.html
-        const /** @type {?} */ nodes = [];
-        this._isInIcu = false;
+        const /** @type {?} */ nodes = [new Text$2(`{${icu.expressionPlaceholder}, ${icu.type}, `)];
+        Object.keys(icu.cases).forEach((c) => {
+            nodes.push(new Text$2(`${c} {`), ...icu.cases[c].visit(this), new Text$2(`} `));
+        });
+        nodes.push(new Text$2(`}`));
         return nodes;
     }
     /**
@@ -30025,7 +30123,6 @@ class _WriteVisitor {
      * @return {?}
      */
     serialize(nodes) {
-        this._isInIcu = false;
         return [].concat(...nodes.map(node => node.visit(this)));
     }
 }
@@ -30039,13 +30136,13 @@ class XliffParser {
      * @return {?}
      */
     parse(xliff, url) {
-        this._unitMlNodes = [];
-        this._mlNodesByMsgId = {};
+        this._unitMlString = null;
+        this._msgIdToHtml = {};
         const /** @type {?} */ xml = new XmlParser().parse(xliff, url, false);
         this._errors = xml.errors;
         visitAll(this, xml.rootNodes, null);
         return {
-            mlNodesByMsgId: this._mlNodesByMsgId,
+            msgIdToHtml: this._msgIdToHtml,
             errors: this._errors,
             locale: this._locale,
         };
@@ -30058,20 +30155,20 @@ class XliffParser {
     visitElement(element, context) {
         switch (element.name) {
             case _UNIT_TAG:
-                this._unitMlNodes = null;
+                this._unitMlString = ((null));
                 const /** @type {?} */ idAttr = element.attrs.find((attr) => attr.name === 'id');
                 if (!idAttr) {
                     this._addError(element, `<${_UNIT_TAG}> misses the "id" attribute`);
                 }
                 else {
                     const /** @type {?} */ id = idAttr.value;
-                    if (this._mlNodesByMsgId.hasOwnProperty(id)) {
+                    if (this._msgIdToHtml.hasOwnProperty(id)) {
                         this._addError(element, `Duplicated translations for msg ${id}`);
                     }
                     else {
                         visitAll(this, element.children, null);
-                        if (this._unitMlNodes) {
-                            this._mlNodesByMsgId[id] = this._unitMlNodes;
+                        if (typeof this._unitMlString === 'string') {
+                            this._msgIdToHtml[id] = this._unitMlString;
                         }
                         else {
                             this._addError(element, `Message ${id} misses a translation`);
@@ -30083,7 +30180,11 @@ class XliffParser {
                 // ignore source message
                 break;
             case _TARGET_TAG:
-                this._unitMlNodes = element.children;
+                const /** @type {?} */ innerTextStart = ((element.startSourceSpan)).end.offset;
+                const /** @type {?} */ innerTextEnd = ((element.endSourceSpan)).start.offset;
+                const /** @type {?} */ content = ((element.startSourceSpan)).start.file.content;
+                const /** @type {?} */ innerText = content.slice(innerTextStart, innerTextEnd);
+                this._unitMlString = innerText;
                 break;
             case _FILE_TAG:
                 const /** @type {?} */ localeAttr = element.attrs.find((attr) => attr.name === 'target-language');
@@ -30134,18 +30235,412 @@ class XliffParser {
      * @return {?}
      */
     _addError(node, message) {
-        this._errors.push(new I18nError(node.sourceSpan, message));
+        this._errors.push(new I18nError(/** @type {?} */ ((node.sourceSpan)), message));
     }
 }
 class XmlToI18n {
     /**
+     * @param {?} message
+     * @param {?} url
+     * @return {?}
+     */
+    convert(message, url) {
+        const /** @type {?} */ xmlIcu = new XmlParser().parse(message, url, true);
+        this._errors = xmlIcu.errors;
+        const /** @type {?} */ i18nNodes = this._errors.length > 0 || xmlIcu.rootNodes.length == 0 ?
+            [] :
+            visitAll(this, xmlIcu.rootNodes);
+        return {
+            i18nNodes: i18nNodes,
+            errors: this._errors,
+        };
+    }
+    /**
+     * @param {?} text
+     * @param {?} context
+     * @return {?}
+     */
+    visitText(text, context) { return new Text$1(text.value, /** @type {?} */ ((text.sourceSpan))); }
+    /**
+     * @param {?} el
+     * @param {?} context
+     * @return {?}
+     */
+    visitElement(el, context) {
+        if (el.name === _PLACEHOLDER_TAG) {
+            const /** @type {?} */ nameAttr = el.attrs.find((attr) => attr.name === 'id');
+            if (nameAttr) {
+                return new Placeholder('', nameAttr.value, /** @type {?} */ ((el.sourceSpan)));
+            }
+            this._addError(el, `<${_PLACEHOLDER_TAG}> misses the "id" attribute`);
+        }
+        else {
+            this._addError(el, `Unexpected tag`);
+        }
+        return null;
+    }
+    /**
+     * @param {?} icu
+     * @param {?} context
+     * @return {?}
+     */
+    visitExpansion(icu, context) {
+        const /** @type {?} */ caseMap = {};
+        visitAll(this, icu.cases).forEach((c) => {
+            caseMap[c.value] = new Container(c.nodes, icu.sourceSpan);
+        });
+        return new Icu(icu.switchValue, icu.type, caseMap, icu.sourceSpan);
+    }
+    /**
+     * @param {?} icuCase
+     * @param {?} context
+     * @return {?}
+     */
+    visitExpansionCase(icuCase, context) {
+        return {
+            value: icuCase.value,
+            nodes: visitAll(this, icuCase.expression),
+        };
+    }
+    /**
+     * @param {?} comment
+     * @param {?} context
+     * @return {?}
+     */
+    visitComment(comment, context) { }
+    /**
+     * @param {?} attribute
+     * @param {?} context
+     * @return {?}
+     */
+    visitAttribute(attribute, context) { }
+    /**
+     * @param {?} node
+     * @param {?} message
+     * @return {?}
+     */
+    _addError(node, message) {
+        this._errors.push(new I18nError(/** @type {?} */ ((node.sourceSpan)), message));
+    }
+}
+/**
+ * @param {?} tag
+ * @return {?}
+ */
+function getCtypeForTag(tag) {
+    switch (tag.toLowerCase()) {
+        case 'br':
+            return 'lb';
+        case 'img':
+            return 'image';
+        default:
+            return `x-${tag}`;
+    }
+}
+
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
+const _VERSION$1 = '2.0';
+const _XMLNS$1 = 'urn:oasis:names:tc:xliff:document:2.0';
+// TODO(vicb): make this a param (s/_/-/)
+const _DEFAULT_SOURCE_LANG$1 = 'en';
+const _PLACEHOLDER_TAG$1 = 'ph';
+const _PLACEHOLDER_SPANNING_TAG = 'pc';
+const _XLIFF_TAG = 'xliff';
+const _SOURCE_TAG$1 = 'source';
+const _TARGET_TAG$1 = 'target';
+const _UNIT_TAG$1 = 'unit';
+class Xliff2 extends Serializer {
+    /**
+     * @param {?} messages
+     * @param {?} locale
+     * @return {?}
+     */
+    write(messages, locale) {
+        const /** @type {?} */ visitor = new _WriteVisitor$1();
+        const /** @type {?} */ units = [];
+        messages.forEach(message => {
+            const /** @type {?} */ unit = new Tag(_UNIT_TAG$1, { id: message.id });
+            if (message.description || message.meaning) {
+                const /** @type {?} */ notes = new Tag('notes');
+                if (message.description) {
+                    notes.children.push(new CR(8), new Tag('note', { category: 'description' }, [new Text$2(message.description)]));
+                }
+                if (message.meaning) {
+                    notes.children.push(new CR(8), new Tag('note', { category: 'meaning' }, [new Text$2(message.meaning)]));
+                }
+                notes.children.push(new CR(6));
+                unit.children.push(new CR(6), notes);
+            }
+            const /** @type {?} */ segment = new Tag('segment');
+            segment.children.push(new CR(8), new Tag(_SOURCE_TAG$1, {}, visitor.serialize(message.nodes)), new CR(6));
+            unit.children.push(new CR(6), segment, new CR(4));
+            units.push(new CR(4), unit);
+        });
+        const /** @type {?} */ file = new Tag('file', { 'original': 'ng.template', id: 'ngi18n' }, [...units, new CR(2)]);
+        const /** @type {?} */ xliff = new Tag(_XLIFF_TAG, { version: _VERSION$1, xmlns: _XMLNS$1, srcLang: locale || _DEFAULT_SOURCE_LANG$1 }, [new CR(2), file, new CR()]);
+        return serialize([
+            new Declaration({ version: '1.0', encoding: 'UTF-8' }), new CR(), xliff, new CR()
+        ]);
+    }
+    /**
+     * @param {?} content
+     * @param {?} url
+     * @return {?}
+     */
+    load(content, url) {
+        // xliff to xml nodes
+        const /** @type {?} */ xliff2Parser = new Xliff2Parser();
+        const { locale, msgIdToHtml, errors } = xliff2Parser.parse(content, url);
+        // xml nodes to i18n nodes
+        const /** @type {?} */ i18nNodesByMsgId = {};
+        const /** @type {?} */ converter = new XmlToI18n$1();
+        Object.keys(msgIdToHtml).forEach(msgId => {
+            const { i18nNodes, errors: e } = converter.convert(msgIdToHtml[msgId], url);
+            errors.push(...e);
+            i18nNodesByMsgId[msgId] = i18nNodes;
+        });
+        if (errors.length) {
+            throw new Error(`xliff2 parse errors:\n${errors.join('\n')}`);
+        }
+        return { locale: /** @type {?} */ ((locale)), i18nNodesByMsgId };
+    }
+    /**
+     * @param {?} message
+     * @return {?}
+     */
+    digest(message) { return decimalDigest(message); }
+}
+class _WriteVisitor$1 {
+    /**
+     * @param {?} text
+     * @param {?=} context
+     * @return {?}
+     */
+    visitText(text, context) { return [new Text$2(text.value)]; }
+    /**
+     * @param {?} container
+     * @param {?=} context
+     * @return {?}
+     */
+    visitContainer(container, context) {
+        const /** @type {?} */ nodes = [];
+        container.children.forEach((node) => nodes.push(...node.visit(this)));
+        return nodes;
+    }
+    /**
+     * @param {?} icu
+     * @param {?=} context
+     * @return {?}
+     */
+    visitIcu(icu, context) {
+        const /** @type {?} */ nodes = [new Text$2(`{${icu.expressionPlaceholder}, ${icu.type}, `)];
+        Object.keys(icu.cases).forEach((c) => {
+            nodes.push(new Text$2(`${c} {`), ...icu.cases[c].visit(this), new Text$2(`} `));
+        });
+        nodes.push(new Text$2(`}`));
+        return nodes;
+    }
+    /**
+     * @param {?} ph
+     * @param {?=} context
+     * @return {?}
+     */
+    visitTagPlaceholder(ph, context) {
+        const /** @type {?} */ type = getTypeForTag(ph.tag);
+        if (ph.isVoid) {
+            const /** @type {?} */ tagPh = new Tag(_PLACEHOLDER_TAG$1, {
+                id: (this._nextPlaceholderId++).toString(),
+                equiv: ph.startName,
+                type: type,
+                disp: `<${ph.tag}/>`,
+            });
+            return [tagPh];
+        }
+        const /** @type {?} */ tagPc = new Tag(_PLACEHOLDER_SPANNING_TAG, {
+            id: (this._nextPlaceholderId++).toString(),
+            equivStart: ph.startName,
+            equivEnd: ph.closeName,
+            type: type,
+            dispStart: `<${ph.tag}>`,
+            dispEnd: `</${ph.tag}>`,
+        });
+        const /** @type {?} */ nodes = [].concat(...ph.children.map(node => node.visit(this)));
+        if (nodes.length) {
+            nodes.forEach((node) => tagPc.children.push(node));
+        }
+        else {
+            tagPc.children.push(new Text$2(''));
+        }
+        return [tagPc];
+    }
+    /**
+     * @param {?} ph
+     * @param {?=} context
+     * @return {?}
+     */
+    visitPlaceholder(ph, context) {
+        return [new Tag(_PLACEHOLDER_TAG$1, {
+                id: (this._nextPlaceholderId++).toString(),
+                equiv: ph.name,
+                disp: `{{${ph.value}}}`,
+            })];
+    }
+    /**
+     * @param {?} ph
+     * @param {?=} context
+     * @return {?}
+     */
+    visitIcuPlaceholder(ph, context) {
+        return [new Tag(_PLACEHOLDER_TAG$1, { id: (this._nextPlaceholderId++).toString() })];
+    }
+    /**
      * @param {?} nodes
      * @return {?}
      */
-    convert(nodes) {
-        this._errors = [];
+    serialize(nodes) {
+        this._nextPlaceholderId = 0;
+        return [].concat(...nodes.map(node => node.visit(this)));
+    }
+}
+class Xliff2Parser {
+    constructor() {
+        this._locale = null;
+    }
+    /**
+     * @param {?} xliff
+     * @param {?} url
+     * @return {?}
+     */
+    parse(xliff, url) {
+        this._unitMlString = null;
+        this._msgIdToHtml = {};
+        const /** @type {?} */ xml = new XmlParser().parse(xliff, url, false);
+        this._errors = xml.errors;
+        visitAll(this, xml.rootNodes, null);
         return {
-            i18nNodes: visitAll(this, nodes),
+            msgIdToHtml: this._msgIdToHtml,
+            errors: this._errors,
+            locale: this._locale,
+        };
+    }
+    /**
+     * @param {?} element
+     * @param {?} context
+     * @return {?}
+     */
+    visitElement(element, context) {
+        switch (element.name) {
+            case _UNIT_TAG$1:
+                this._unitMlString = null;
+                const /** @type {?} */ idAttr = element.attrs.find((attr) => attr.name === 'id');
+                if (!idAttr) {
+                    this._addError(element, `<${_UNIT_TAG$1}> misses the "id" attribute`);
+                }
+                else {
+                    const /** @type {?} */ id = idAttr.value;
+                    if (this._msgIdToHtml.hasOwnProperty(id)) {
+                        this._addError(element, `Duplicated translations for msg ${id}`);
+                    }
+                    else {
+                        visitAll(this, element.children, null);
+                        if (typeof this._unitMlString === 'string') {
+                            this._msgIdToHtml[id] = this._unitMlString;
+                        }
+                        else {
+                            this._addError(element, `Message ${id} misses a translation`);
+                        }
+                    }
+                }
+                break;
+            case _SOURCE_TAG$1:
+                // ignore source message
+                break;
+            case _TARGET_TAG$1:
+                const /** @type {?} */ innerTextStart = ((element.startSourceSpan)).end.offset;
+                const /** @type {?} */ innerTextEnd = ((element.endSourceSpan)).start.offset;
+                const /** @type {?} */ content = ((element.startSourceSpan)).start.file.content;
+                const /** @type {?} */ innerText = content.slice(innerTextStart, innerTextEnd);
+                this._unitMlString = innerText;
+                break;
+            case _XLIFF_TAG:
+                const /** @type {?} */ localeAttr = element.attrs.find((attr) => attr.name === 'trgLang');
+                if (localeAttr) {
+                    this._locale = localeAttr.value;
+                }
+                const /** @type {?} */ versionAttr = element.attrs.find((attr) => attr.name === 'version');
+                if (versionAttr) {
+                    const /** @type {?} */ version = versionAttr.value;
+                    if (version !== '2.0') {
+                        this._addError(element, `The XLIFF file version ${version} is not compatible with XLIFF 2.0 serializer`);
+                    }
+                    else {
+                        visitAll(this, element.children, null);
+                    }
+                }
+                break;
+            default:
+                visitAll(this, element.children, null);
+        }
+    }
+    /**
+     * @param {?} attribute
+     * @param {?} context
+     * @return {?}
+     */
+    visitAttribute(attribute, context) { }
+    /**
+     * @param {?} text
+     * @param {?} context
+     * @return {?}
+     */
+    visitText(text, context) { }
+    /**
+     * @param {?} comment
+     * @param {?} context
+     * @return {?}
+     */
+    visitComment(comment, context) { }
+    /**
+     * @param {?} expansion
+     * @param {?} context
+     * @return {?}
+     */
+    visitExpansion(expansion, context) { }
+    /**
+     * @param {?} expansionCase
+     * @param {?} context
+     * @return {?}
+     */
+    visitExpansionCase(expansionCase, context) { }
+    /**
+     * @param {?} node
+     * @param {?} message
+     * @return {?}
+     */
+    _addError(node, message) {
+        this._errors.push(new I18nError(node.sourceSpan, message));
+    }
+}
+class XmlToI18n$1 {
+    /**
+     * @param {?} message
+     * @param {?} url
+     * @return {?}
+     */
+    convert(message, url) {
+        const /** @type {?} */ xmlIcu = new XmlParser().parse(message, url, true);
+        this._errors = xmlIcu.errors;
+        const /** @type {?} */ i18nNodes = this._errors.length > 0 || xmlIcu.rootNodes.length == 0 ?
+            [] :
+            [].concat(...visitAll(this, xmlIcu.rootNodes));
+        return {
+            i18nNodes,
             errors: this._errors,
         };
     }
@@ -30161,29 +30656,58 @@ class XmlToI18n {
      * @return {?}
      */
     visitElement(el, context) {
-        if (el.name === _PLACEHOLDER_TAG) {
-            const /** @type {?} */ nameAttr = el.attrs.find((attr) => attr.name === 'id');
-            if (nameAttr) {
-                return new Placeholder('', nameAttr.value, el.sourceSpan);
-            }
-            this._addError(el, `<${_PLACEHOLDER_TAG}> misses the "id" attribute`);
+        switch (el.name) {
+            case _PLACEHOLDER_TAG$1:
+                const /** @type {?} */ nameAttr = el.attrs.find((attr) => attr.name === 'equiv');
+                if (nameAttr) {
+                    return [new Placeholder('', nameAttr.value, el.sourceSpan)];
+                }
+                this._addError(el, `<${_PLACEHOLDER_TAG$1}> misses the "equiv" attribute`);
+                break;
+            case _PLACEHOLDER_SPANNING_TAG:
+                const /** @type {?} */ startAttr = el.attrs.find((attr) => attr.name === 'equivStart');
+                const /** @type {?} */ endAttr = el.attrs.find((attr) => attr.name === 'equivEnd');
+                if (!startAttr) {
+                    this._addError(el, `<${_PLACEHOLDER_TAG$1}> misses the "equivStart" attribute`);
+                }
+                else if (!endAttr) {
+                    this._addError(el, `<${_PLACEHOLDER_TAG$1}> misses the "equivEnd" attribute`);
+                }
+                else {
+                    const /** @type {?} */ startId = startAttr.value;
+                    const /** @type {?} */ endId = endAttr.value;
+                    const /** @type {?} */ nodes = [];
+                    return nodes.concat(new Placeholder('', startId, el.sourceSpan), ...el.children.map(node => node.visit(this, null)), new Placeholder('', endId, el.sourceSpan));
+                }
+                break;
+            default:
+                this._addError(el, `Unexpected tag`);
         }
-        else {
-            this._addError(el, `Unexpected tag`);
-        }
+        return null;
     }
     /**
      * @param {?} icu
      * @param {?} context
      * @return {?}
      */
-    visitExpansion(icu, context) { }
+    visitExpansion(icu, context) {
+        const /** @type {?} */ caseMap = {};
+        visitAll(this, icu.cases).forEach((c) => {
+            caseMap[c.value] = new Container(c.nodes, icu.sourceSpan);
+        });
+        return new Icu(icu.switchValue, icu.type, caseMap, icu.sourceSpan);
+    }
     /**
      * @param {?} icuCase
      * @param {?} context
      * @return {?}
      */
-    visitExpansionCase(icuCase, context) { }
+    visitExpansionCase(icuCase, context) {
+        return {
+            value: icuCase.value,
+            nodes: [].concat(...visitAll(this, icuCase.expression)),
+        };
+    }
     /**
      * @param {?} comment
      * @param {?} context
@@ -30209,14 +30733,19 @@ class XmlToI18n {
  * @param {?} tag
  * @return {?}
  */
-function getCtypeForTag(tag) {
+function getTypeForTag(tag) {
     switch (tag.toLowerCase()) {
         case 'br':
-            return 'lb';
+        case 'b':
+        case 'i':
+        case 'u':
+            return 'fmt';
         case 'img':
             return 'image';
+        case 'a':
+            return 'link';
         default:
-            return `x-${tag}`;
+            return 'other';
     }
 }
 
@@ -30229,8 +30758,9 @@ function getCtypeForTag(tag) {
  */
 const _MESSAGES_TAG = 'messagebundle';
 const _MESSAGE_TAG = 'msg';
-const _PLACEHOLDER_TAG$1 = 'ph';
+const _PLACEHOLDER_TAG$2 = 'ph';
 const _EXEMPLE_TAG = 'ex';
+const _SOURCE_TAG$2 = 'source';
 const _DOCTYPE = `<!ELEMENT messagebundle (msg)*>
 <!ATTLIST messagebundle class CDATA #IMPLIED>
 
@@ -30268,7 +30798,13 @@ class Xmb extends Serializer {
             if (message.meaning) {
                 attrs['meaning'] = message.meaning;
             }
-            rootNode.children.push(new CR(2), new Tag(_MESSAGE_TAG, attrs, visitor.serialize(message.nodes)));
+            let /** @type {?} */ sourceTags = [];
+            message.sources.forEach((source) => {
+                sourceTags.push(new Tag(_SOURCE_TAG$2, {}, [
+                    new Text$2(`${source.filePath}:${source.startLine}${source.endLine !== source.startLine ? ',' + source.endLine : ''}`)
+                ]));
+            });
+            rootNode.children.push(new CR(2), new Tag(_MESSAGE_TAG, attrs, [...sourceTags, ...visitor.serialize(message.nodes)]));
         });
         rootNode.children.push(new CR());
         return serialize([
@@ -30338,13 +30874,13 @@ class _Visitor$2 {
      */
     visitTagPlaceholder(ph, context) {
         const /** @type {?} */ startEx = new Tag(_EXEMPLE_TAG, {}, [new Text$2(`<${ph.tag}>`)]);
-        const /** @type {?} */ startTagPh = new Tag(_PLACEHOLDER_TAG$1, { name: ph.startName }, [startEx]);
+        const /** @type {?} */ startTagPh = new Tag(_PLACEHOLDER_TAG$2, { name: ph.startName }, [startEx]);
         if (ph.isVoid) {
             // void tags have no children nor closing tags
             return [startTagPh];
         }
         const /** @type {?} */ closeEx = new Tag(_EXEMPLE_TAG, {}, [new Text$2(`</${ph.tag}>`)]);
-        const /** @type {?} */ closeTagPh = new Tag(_PLACEHOLDER_TAG$1, { name: ph.closeName }, [closeEx]);
+        const /** @type {?} */ closeTagPh = new Tag(_PLACEHOLDER_TAG$2, { name: ph.closeName }, [closeEx]);
         return [startTagPh, ...this.serialize(ph.children), closeTagPh];
     }
     /**
@@ -30353,7 +30889,7 @@ class _Visitor$2 {
      * @return {?}
      */
     visitPlaceholder(ph, context) {
-        return [new Tag(_PLACEHOLDER_TAG$1, { name: ph.name })];
+        return [new Tag(_PLACEHOLDER_TAG$2, { name: ph.name })];
     }
     /**
      * @param {?} ph
@@ -30361,7 +30897,7 @@ class _Visitor$2 {
      * @return {?}
      */
     visitIcuPlaceholder(ph, context) {
-        return [new Tag(_PLACEHOLDER_TAG$1, { name: ph.name })];
+        return [new Tag(_PLACEHOLDER_TAG$2, { name: ph.name })];
     }
     /**
      * @param {?} nodes
@@ -30392,7 +30928,7 @@ class ExampleVisitor {
      * @return {?}
      */
     visitTag(tag) {
-        if (tag.name === _PLACEHOLDER_TAG$1) {
+        if (tag.name === _PLACEHOLDER_TAG$2) {
             if (!tag.children || tag.children.length == 0) {
                 const /** @type {?} */ exText = new Text$2(tag.attrs['name'] || '...');
                 tag.children = [new Tag(_EXEMPLE_TAG, {}, [exText])];
@@ -30435,7 +30971,7 @@ function toPublicName(internalName) {
  */
 const _TRANSLATIONS_TAG = 'translationbundle';
 const _TRANSLATION_TAG = 'translation';
-const _PLACEHOLDER_TAG$2 = 'ph';
+const _PLACEHOLDER_TAG$3 = 'ph';
 class Xtb extends Serializer {
     /**
      * @param {?} messages
@@ -30454,7 +30990,7 @@ class Xtb extends Serializer {
         const { locale, msgIdToHtml, errors } = xtbParser.parse(content, url);
         // xml nodes to i18n nodes
         const /** @type {?} */ i18nNodesByMsgId = {};
-        const /** @type {?} */ converter = new XmlToI18n$1();
+        const /** @type {?} */ converter = new XmlToI18n$2();
         // Because we should be able to load xtb files that rely on features not supported by angular,
         // we need to delay the conversion of html to i18n nodes so that non angular messages are not
         // converted
@@ -30471,7 +31007,7 @@ class Xtb extends Serializer {
         if (errors.length) {
             throw new Error(`xtb parse errors:\n${errors.join('\n')}`);
         }
-        return { locale, i18nNodesByMsgId };
+        return { locale: /** @type {?} */ ((locale)), i18nNodesByMsgId };
     }
     /**
      * @param {?} message
@@ -30557,10 +31093,10 @@ class XtbParser {
                         this._addError(element, `Duplicated translations for msg ${id}`);
                     }
                     else {
-                        const /** @type {?} */ innerTextStart = element.startSourceSpan.end.offset;
-                        const /** @type {?} */ innerTextEnd = element.endSourceSpan.start.offset;
-                        const /** @type {?} */ content = element.startSourceSpan.start.file.content;
-                        const /** @type {?} */ innerText = content.slice(innerTextStart, innerTextEnd);
+                        const /** @type {?} */ innerTextStart = ((element.startSourceSpan)).end.offset;
+                        const /** @type {?} */ innerTextEnd = ((element.endSourceSpan)).start.offset;
+                        const /** @type {?} */ content = ((element.startSourceSpan)).start.file.content;
+                        const /** @type {?} */ innerText = content.slice(/** @type {?} */ ((innerTextStart)), /** @type {?} */ ((innerTextEnd)));
                         this._msgIdToHtml[id] = innerText;
                     }
                 }
@@ -30605,10 +31141,10 @@ class XtbParser {
      * @return {?}
      */
     _addError(node, message) {
-        this._errors.push(new I18nError(node.sourceSpan, message));
+        this._errors.push(new I18nError(/** @type {?} */ ((node.sourceSpan)), message));
     }
 }
-class XmlToI18n$1 {
+class XmlToI18n$2 {
     /**
      * @param {?} message
      * @param {?} url
@@ -30630,7 +31166,7 @@ class XmlToI18n$1 {
      * @param {?} context
      * @return {?}
      */
-    visitText(text, context) { return new Text$1(text.value, text.sourceSpan); }
+    visitText(text, context) { return new Text$1(text.value, /** @type {?} */ ((text.sourceSpan))); }
     /**
      * @param {?} icu
      * @param {?} context
@@ -30660,16 +31196,17 @@ class XmlToI18n$1 {
      * @return {?}
      */
     visitElement(el, context) {
-        if (el.name === _PLACEHOLDER_TAG$2) {
+        if (el.name === _PLACEHOLDER_TAG$3) {
             const /** @type {?} */ nameAttr = el.attrs.find((attr) => attr.name === 'name');
             if (nameAttr) {
-                return new Placeholder('', nameAttr.value, el.sourceSpan);
+                return new Placeholder('', nameAttr.value, /** @type {?} */ ((el.sourceSpan)));
             }
-            this._addError(el, `<${_PLACEHOLDER_TAG$2}> misses the "name" attribute`);
+            this._addError(el, `<${_PLACEHOLDER_TAG$3}> misses the "name" attribute`);
         }
         else {
             this._addError(el, `Unexpected tag`);
         }
+        return null;
     }
     /**
      * @param {?} comment
@@ -30689,7 +31226,7 @@ class XmlToI18n$1 {
      * @return {?}
      */
     _addError(node, message) {
-        this._errors.push(new I18nError(node.sourceSpan, message));
+        this._errors.push(new I18nError(/** @type {?} */ ((node.sourceSpan)), message));
     }
 }
 
@@ -30757,7 +31294,7 @@ class TranslationBundle {
     static load(content, url, serializer, missingTranslationStrategy, console) {
         const { locale, i18nNodesByMsgId } = serializer.load(content, url);
         const /** @type {?} */ digestFn = (m) => serializer.digest(m);
-        const /** @type {?} */ mapperFactory = (m) => serializer.createNameMapper(m);
+        const /** @type {?} */ mapperFactory = (m) => ((serializer.createNameMapper(m)));
         return new TranslationBundle(i18nNodesByMsgId, locale, digestFn, mapperFactory, missingTranslationStrategy, console);
     }
     /**
@@ -30898,7 +31435,7 @@ class I18nToHtmlVisitor {
             // When there is a translation use its nodes as the source
             // And create a mapper to convert serialized placeholder names to internal names
             nodes = this._i18nNodesByMsgId[id];
-            this._mapper = (name) => mapper ? mapper.toInternalName(name) : name;
+            this._mapper = (name) => mapper ? ((mapper.toInternalName(name))) : name;
         }
         else {
             // When no translation has been found
@@ -30918,7 +31455,7 @@ class I18nToHtmlVisitor {
             this._mapper = (name) => name;
         }
         const /** @type {?} */ text = nodes.map(node => node.visit(this)).join('');
-        const /** @type {?} */ context = this._contextStack.pop();
+        const /** @type {?} */ context = ((this._contextStack.pop()));
         this._srcMsg = context.msg;
         this._mapper = context.mapper;
         return text;
@@ -30986,6 +31523,9 @@ function createSerializer(format) {
             return new Xmb();
         case 'xtb':
             return new Xtb();
+        case 'xliff2':
+        case 'xlf2':
+            return new Xliff2();
         case 'xliff':
         case 'xlf':
         default:
@@ -31468,27 +32008,27 @@ class ProviderElementContext {
         this._seenProviders.set(tokenReference(token), true);
         const /** @type {?} */ transformedProviders = resolvedProvider.providers.map((provider) => {
             let /** @type {?} */ transformedUseValue = provider.useValue;
-            let /** @type {?} */ transformedUseExisting = provider.useExisting;
-            let /** @type {?} */ transformedDeps;
+            let /** @type {?} */ transformedUseExisting = ((provider.useExisting));
+            let /** @type {?} */ transformedDeps = ((undefined));
             if (provider.useExisting != null) {
-                const /** @type {?} */ existingDiDep = this._getDependency(resolvedProvider.providerType, { token: provider.useExisting }, eager);
+                const /** @type {?} */ existingDiDep = ((this._getDependency(resolvedProvider.providerType, { token: provider.useExisting }, eager)));
                 if (existingDiDep.token != null) {
                     transformedUseExisting = existingDiDep.token;
                 }
                 else {
-                    transformedUseExisting = null;
+                    transformedUseExisting = ((null));
                     transformedUseValue = existingDiDep.value;
                 }
             }
             else if (provider.useFactory) {
                 const /** @type {?} */ deps = provider.deps || provider.useFactory.diDeps;
                 transformedDeps =
-                    deps.map((dep) => this._getDependency(resolvedProvider.providerType, dep, eager));
+                    deps.map((dep) => ((this._getDependency(resolvedProvider.providerType, dep, eager))));
             }
             else if (provider.useClass) {
                 const /** @type {?} */ deps = provider.deps || provider.useClass.diDeps;
                 transformedDeps =
-                    deps.map((dep) => this._getDependency(resolvedProvider.providerType, dep, eager));
+                    deps.map((dep) => ((this._getDependency(resolvedProvider.providerType, dep, eager))));
             }
             return _transformProvider(provider, {
                 useExisting: transformedUseExisting,
@@ -31507,9 +32047,9 @@ class ProviderElementContext {
      * @param {?=} eager
      * @return {?}
      */
-    _getLocalDependency(requestingProviderType, dep, eager = null) {
+    _getLocalDependency(requestingProviderType, dep, eager = false) {
         if (dep.isAttribute) {
-            const /** @type {?} */ attrValue = this._attrs[dep.token.value];
+            const /** @type {?} */ attrValue = this._attrs[((dep.token)).value];
             return { isValue: true, value: attrValue == null ? null : attrValue };
         }
         if (dep.token != null) {
@@ -31543,7 +32083,7 @@ class ProviderElementContext {
      * @param {?=} eager
      * @return {?}
      */
-    _getDependency(requestingProviderType, dep, eager = null) {
+    _getDependency(requestingProviderType, dep, eager = false) {
         let /** @type {?} */ currElement = this;
         let /** @type {?} */ currEager = eager;
         let /** @type {?} */ result = null;
@@ -31568,8 +32108,8 @@ class ProviderElementContext {
             // check @Host restriction
             if (!result) {
                 if (!dep.isHost || this.viewContext.component.isHost ||
-                    this.viewContext.component.type.reference === tokenReference(dep.token) ||
-                    this.viewContext.viewProviders.get(tokenReference(dep.token)) != null) {
+                    this.viewContext.component.type.reference === tokenReference(/** @type {?} */ ((dep.token))) ||
+                    this.viewContext.viewProviders.get(tokenReference(/** @type {?} */ ((dep.token)))) != null) {
                     result = dep;
                 }
                 else {
@@ -31578,7 +32118,7 @@ class ProviderElementContext {
             }
         }
         if (!result) {
-            this.viewContext.errors.push(new ProviderError(`No provider for ${tokenName(dep.token)}`, this._sourceSpan));
+            this.viewContext.errors.push(new ProviderError(`No provider for ${tokenName(/** @type {?} */ ((dep.token)))}`, this._sourceSpan));
         }
         return result;
     }
@@ -31634,15 +32174,15 @@ class NgModuleProviderAnalyzer {
         this._seenProviders.set(tokenReference(token), true);
         const /** @type {?} */ transformedProviders = resolvedProvider.providers.map((provider) => {
             let /** @type {?} */ transformedUseValue = provider.useValue;
-            let /** @type {?} */ transformedUseExisting = provider.useExisting;
-            let /** @type {?} */ transformedDeps;
+            let /** @type {?} */ transformedUseExisting = ((provider.useExisting));
+            let /** @type {?} */ transformedDeps = ((undefined));
             if (provider.useExisting != null) {
                 const /** @type {?} */ existingDiDep = this._getDependency({ token: provider.useExisting }, eager, resolvedProvider.sourceSpan);
                 if (existingDiDep.token != null) {
                     transformedUseExisting = existingDiDep.token;
                 }
                 else {
-                    transformedUseExisting = null;
+                    transformedUseExisting = ((null));
                     transformedUseValue = existingDiDep.value;
                 }
             }
@@ -31673,7 +32213,7 @@ class NgModuleProviderAnalyzer {
      * @param {?=} requestorSourceSpan
      * @return {?}
      */
-    _getDependency(dep, eager = null, requestorSourceSpan) {
+    _getDependency(dep, eager = false, requestorSourceSpan) {
         let /** @type {?} */ foundLocal = false;
         if (!dep.isSkipSelf && dep.token != null) {
             // access the injector
@@ -31691,7 +32231,7 @@ class NgModuleProviderAnalyzer {
                 result = { isValue: true, value: null };
             }
             else {
-                this._errors.push(new ProviderError(`No provider for ${tokenName(dep.token)}`, requestorSourceSpan));
+                this._errors.push(new ProviderError(`No provider for ${tokenName(/** @type {?} */ ((dep.token)))}`, requestorSourceSpan));
             }
         }
         return result;
@@ -31762,7 +32302,7 @@ function _resolveProviders(providers, providerType, eager, sourceSpan, targetErr
                 ((provider.token.identifier)).lifecycleHooks :
                 [];
             const /** @type {?} */ isUseValue = !(provider.useClass || provider.useExisting || provider.useFactory);
-            resolvedProvider = new ProviderAst(provider.token, provider.multi, eager || isUseValue, [provider], providerType, lifecycleHooks, sourceSpan);
+            resolvedProvider = new ProviderAst(provider.token, !!provider.multi, eager || isUseValue, [provider], providerType, lifecycleHooks, sourceSpan);
             targetProvidersByToken.set(tokenReference(provider.token), resolvedProvider);
         }
         else {
@@ -32035,6 +32575,7 @@ class BindingParser {
             });
             return boundProps.map((prop) => this.createElementPropertyAst(elementSelector, prop));
         }
+        return null;
     }
     /**
      * @param {?} dirMeta
@@ -32055,6 +32596,7 @@ class BindingParser {
             });
             return targetEventAsts;
         }
+        return null;
     }
     /**
      * @param {?} value
@@ -32064,7 +32606,7 @@ class BindingParser {
     parseInterpolation(value, sourceSpan) {
         const /** @type {?} */ sourceInfo = sourceSpan.start.toString();
         try {
-            const /** @type {?} */ ast = this._exprParser.parseInterpolation(value, sourceInfo, this._interpolationConfig);
+            const /** @type {?} */ ast = ((this._exprParser.parseInterpolation(value, sourceInfo, this._interpolationConfig)));
             if (ast)
                 this._reportExpressionParserErrors(ast.errors, sourceSpan);
             this._checkPipes(ast, sourceSpan);
@@ -32196,7 +32738,7 @@ class BindingParser {
      * @return {?}
      */
     _parsePropertyAst(name, ast, sourceSpan, targetMatchableAttrs, targetProps) {
-        targetMatchableAttrs.push([name, ast.source]);
+        targetMatchableAttrs.push([name, /** @type {?} */ ((ast.source))]);
         targetProps.push(new BoundProperty(name, ast, BoundPropertyType.DEFAULT, sourceSpan));
     }
     /**
@@ -32212,7 +32754,7 @@ class BindingParser {
         // For animations it is valid to not have an expression since */void
         // states will be applied by angular when the element is attached/detached
         const /** @type {?} */ ast = this._parseBinding(expression || 'null', false, sourceSpan);
-        targetMatchableAttrs.push([name, ast.source]);
+        targetMatchableAttrs.push([name, /** @type {?} */ ((ast.source))]);
         targetProps.push(new BoundProperty(name, ast, BoundPropertyType.ANIMATION, sourceSpan));
     }
     /**
@@ -32247,10 +32789,10 @@ class BindingParser {
             return new BoundElementPropertyAst(boundProp.name, PropertyBindingType.Animation, SecurityContext.NONE, boundProp.expression, null, boundProp.sourceSpan);
         }
         let /** @type {?} */ unit = null;
-        let /** @type {?} */ bindingType;
+        let /** @type {?} */ bindingType = ((undefined));
         let /** @type {?} */ boundPropertyName = null;
         const /** @type {?} */ parts = boundProp.name.split(PROPERTY_PARTS_SEPARATOR);
-        let /** @type {?} */ securityContexts;
+        let /** @type {?} */ securityContexts = ((undefined));
         // Check check for special cases (prefix style, attr, class)
         if (parts.length > 1) {
             if (parts[0] == ATTRIBUTE_PREFIX) {
@@ -32340,9 +32882,9 @@ class BindingParser {
      */
     _parseEvent(name, expression, sourceSpan, targetMatchableAttrs, targetEvents) {
         // long format: 'target: eventName'
-        const [target, eventName] = splitAtColon(name, [null, name]);
+        const [target, eventName] = splitAtColon(name, [/** @type {?} */ ((null)), name]);
         const /** @type {?} */ ast = this._parseAction(expression, sourceSpan);
-        targetMatchableAttrs.push([name, ast.source]);
+        targetMatchableAttrs.push([/** @type {?} */ ((name)), /** @type {?} */ ((ast.source))]);
         targetEvents.push(new BoundEventAst(eventName, target, null, ast, sourceSpan));
         // Don't detect directives for event names for now,
         // so don't add the event name to the matchableAttrs
@@ -32420,7 +32962,7 @@ class BindingParser {
         const /** @type {?} */ report = isAttr ? this._schemaRegistry.validateAttribute(propName) :
             this._schemaRegistry.validateProperty(propName);
         if (report.error) {
-            this._reportError(report.msg, sourceSpan, ParseErrorLevel.ERROR);
+            this._reportError(/** @type {?} */ ((report.msg)), sourceSpan, ParseErrorLevel.ERROR);
         }
     }
 }
@@ -32475,7 +33017,6 @@ function calcPossibleSecurityContexts(registry, selector, propName, isAttribute)
  * found in the LICENSE file at https://angular.io/license
  */
 const NG_CONTENT_SELECT_ATTR = 'select';
-const NG_CONTENT_ELEMENT = 'ng-content';
 const LINK_ELEMENT = 'link';
 const LINK_STYLE_REL_ATTR = 'rel';
 const LINK_STYLE_HREF_ATTR = 'href';
@@ -32489,11 +33030,11 @@ const NG_PROJECT_AS = 'ngProjectAs';
  * @return {?}
  */
 function preparseElement(ast) {
-    let /** @type {?} */ selectAttr = null;
-    let /** @type {?} */ hrefAttr = null;
-    let /** @type {?} */ relAttr = null;
+    let /** @type {?} */ selectAttr = ((null));
+    let /** @type {?} */ hrefAttr = ((null));
+    let /** @type {?} */ relAttr = ((null));
     let /** @type {?} */ nonBindable = false;
-    let /** @type {?} */ projectAs = null;
+    let /** @type {?} */ projectAs = ((null));
     ast.attrs.forEach(attr => {
         const /** @type {?} */ lcAttrName = attr.name.toLowerCase();
         if (lcAttrName == NG_CONTENT_SELECT_ATTR) {
@@ -32517,7 +33058,7 @@ function preparseElement(ast) {
     selectAttr = normalizeNgContentSelect(selectAttr);
     const /** @type {?} */ nodeName = ast.name.toLowerCase();
     let /** @type {?} */ type = PreparsedElementType.OTHER;
-    if (splitNsName(nodeName)[1] == NG_CONTENT_ELEMENT) {
+    if (isNgContent(nodeName)) {
         type = PreparsedElementType.NG_CONTENT;
     }
     else if (nodeName == STYLE_ELEMENT) {
@@ -32597,7 +33138,6 @@ const IDENT_BANANA_BOX_IDX = 8;
 const IDENT_PROPERTY_IDX = 9;
 // Group 10 = identifier inside ()
 const IDENT_EVENT_IDX = 10;
-const NG_TEMPLATE_ELEMENT = 'ng-template';
 // deprecated in 4.x
 const TEMPLATE_ELEMENT = 'template';
 // deprecated in 4.x
@@ -32679,10 +33219,9 @@ class TemplateParser {
      */
     parse(component, template, directives, pipes, schemas, templateUrl) {
         const /** @type {?} */ result = this.tryParse(component, template, directives, pipes, schemas, templateUrl);
-        const /** @type {?} */ warnings = result.errors.filter(error => error.level === ParseErrorLevel.WARNING).filter(warnOnlyOnce([
-            TEMPLATE_ATTR_DEPRECATION_WARNING, TEMPLATE_ELEMENT_DEPRECATION_WARNING
-        ]));
-        const /** @type {?} */ errors = result.errors.filter(error => error.level === ParseErrorLevel.ERROR);
+        const /** @type {?} */ warnings = ((result.errors)).filter(error => error.level === ParseErrorLevel.WARNING)
+            .filter(warnOnlyOnce([TEMPLATE_ATTR_DEPRECATION_WARNING, TEMPLATE_ELEMENT_DEPRECATION_WARNING]));
+        const /** @type {?} */ errors = ((result.errors)).filter(error => error.level === ParseErrorLevel.ERROR);
         if (warnings.length > 0) {
             this._console.warn(`Template parse warnings:\n${warnings.join('\n')}`);
         }
@@ -32690,7 +33229,7 @@ class TemplateParser {
             const /** @type {?} */ errorString = errors.join('\n');
             throw syntaxError(`Template parse errors:\n${errorString}`);
         }
-        return { template: result.templateAst, pipes: result.usedPipes };
+        return { template: /** @type {?} */ ((result.templateAst)), pipes: /** @type {?} */ ((result.usedPipes)) };
     }
     /**
      * @param {?} component
@@ -32702,19 +33241,17 @@ class TemplateParser {
      * @return {?}
      */
     tryParse(component, template, directives, pipes, schemas, templateUrl) {
-        return this.tryParseHtml(this.expandHtml(this._htmlParser.parse(template, templateUrl, true, this.getInterpolationConfig(component))), component, template, directives, pipes, schemas, templateUrl);
+        return this.tryParseHtml(this.expandHtml(/** @type {?} */ ((this._htmlParser)).parse(template, templateUrl, true, this.getInterpolationConfig(component))), component, directives, pipes, schemas);
     }
     /**
      * @param {?} htmlAstWithErrors
      * @param {?} component
-     * @param {?} template
      * @param {?} directives
      * @param {?} pipes
      * @param {?} schemas
-     * @param {?} templateUrl
      * @return {?}
      */
-    tryParseHtml(htmlAstWithErrors, component, template, directives, pipes, schemas, templateUrl) {
+    tryParseHtml(htmlAstWithErrors, component, directives, pipes, schemas) {
         let /** @type {?} */ result;
         const /** @type {?} */ errors = htmlAstWithErrors.errors;
         const /** @type {?} */ usedPipes = [];
@@ -32722,14 +33259,14 @@ class TemplateParser {
             const /** @type {?} */ uniqDirectives = removeSummaryDuplicates(directives);
             const /** @type {?} */ uniqPipes = removeSummaryDuplicates(pipes);
             const /** @type {?} */ providerViewContext = new ProviderViewContext(component);
-            let /** @type {?} */ interpolationConfig;
+            let /** @type {?} */ interpolationConfig = ((undefined));
             if (component.template && component.template.interpolation) {
                 interpolationConfig = {
                     start: component.template.interpolation[0],
                     end: component.template.interpolation[1]
                 };
             }
-            const /** @type {?} */ bindingParser = new BindingParser(this._exprParser, interpolationConfig, this._schemaRegistry, uniqPipes, errors);
+            const /** @type {?} */ bindingParser = new BindingParser(this._exprParser, /** @type {?} */ ((interpolationConfig)), this._schemaRegistry, uniqPipes, errors);
             const /** @type {?} */ parseVisitor = new TemplateParseVisitor(this._config, providerViewContext, uniqDirectives, bindingParser, this._schemaRegistry, schemas, errors);
             result = visitAll(parseVisitor, htmlAstWithErrors.rootNodes, EMPTY_ELEMENT_CONTEXT);
             errors.push(...providerViewContext.errors);
@@ -32770,6 +33307,7 @@ class TemplateParser {
         if (component.template) {
             return InterpolationConfig.fromArray(component.template.interpolation);
         }
+        return undefined;
     }
     /**
      * \@internal
@@ -32852,10 +33390,10 @@ class TemplateParseVisitor {
      * @return {?}
      */
     visitText(text, parent) {
-        const /** @type {?} */ ngContentIndex = parent.findNgContentIndex(TEXT_CSS_SELECTOR);
-        const /** @type {?} */ expr = this._bindingParser.parseInterpolation(text.value, text.sourceSpan);
-        return expr ? new BoundTextAst(expr, ngContentIndex, text.sourceSpan) :
-            new TextAst(text.value, ngContentIndex, text.sourceSpan);
+        const /** @type {?} */ ngContentIndex = ((parent.findNgContentIndex(TEXT_CSS_SELECTOR)));
+        const /** @type {?} */ expr = this._bindingParser.parseInterpolation(text.value, /** @type {?} */ ((text.sourceSpan)));
+        return expr ? new BoundTextAst(expr, ngContentIndex, /** @type {?} */ ((text.sourceSpan))) :
+            new TextAst(text.value, ngContentIndex, /** @type {?} */ ((text.sourceSpan)));
     }
     /**
      * @param {?} attribute
@@ -32923,7 +33461,7 @@ class TemplateParseVisitor {
                     this._reportError(`Can't have multiple template bindings on one element. Use only one attribute named 'template' or prefixed with *`, attr.sourceSpan);
                 }
                 hasInlineTemplates = true;
-                this._bindingParser.parseInlineTemplateBinding(prefixToken, templateBindingsSource, attr.sourceSpan, templateMatchableAttrs, templateElementOrDirectiveProps, templateElementVars);
+                this._bindingParser.parseInlineTemplateBinding(/** @type {?} */ ((prefixToken)), /** @type {?} */ ((templateBindingsSource)), attr.sourceSpan, templateMatchableAttrs, templateElementOrDirectiveProps, templateElementVars);
             }
             if (!hasBinding && !hasTemplateBinding) {
                 // don't include the bindings as attributes as well in the AST
@@ -32935,46 +33473,46 @@ class TemplateParseVisitor {
         const { directives: directiveMetas, matchElement } = this._parseDirectives(this.selectorMatcher, elementCssSelector);
         const /** @type {?} */ references = [];
         const /** @type {?} */ boundDirectivePropNames = new Set();
-        const /** @type {?} */ directiveAsts = this._createDirectiveAsts(isTemplateElement, element.name, directiveMetas, elementOrDirectiveProps, elementOrDirectiveRefs, element.sourceSpan, references, boundDirectivePropNames);
+        const /** @type {?} */ directiveAsts = this._createDirectiveAsts(isTemplateElement, element.name, directiveMetas, elementOrDirectiveProps, elementOrDirectiveRefs, /** @type {?} */ ((element.sourceSpan)), references, boundDirectivePropNames);
         const /** @type {?} */ elementProps = this._createElementPropertyAsts(element.name, elementOrDirectiveProps, boundDirectivePropNames);
         const /** @type {?} */ isViewRoot = parent.isTemplateElement || hasInlineTemplates;
-        const /** @type {?} */ providerContext = new ProviderElementContext(this.providerViewContext, parent.providerContext, isViewRoot, directiveAsts, attrs, references, isTemplateElement, queryStartIndex, element.sourceSpan);
-        const /** @type {?} */ children = visitAll(preparsedElement.nonBindable ? NON_BINDABLE_VISITOR : this, element.children, ElementContext.create(isTemplateElement, directiveAsts, isTemplateElement ? parent.providerContext : providerContext));
+        const /** @type {?} */ providerContext = new ProviderElementContext(this.providerViewContext, /** @type {?} */ ((parent.providerContext)), isViewRoot, directiveAsts, attrs, references, isTemplateElement, queryStartIndex, /** @type {?} */ ((element.sourceSpan)));
+        const /** @type {?} */ children = visitAll(preparsedElement.nonBindable ? NON_BINDABLE_VISITOR : this, element.children, ElementContext.create(isTemplateElement, directiveAsts, isTemplateElement ? ((parent.providerContext)) : providerContext));
         providerContext.afterElement();
         // Override the actual selector when the `ngProjectAs` attribute is provided
         const /** @type {?} */ projectionSelector = preparsedElement.projectAs != null ?
             CssSelector.parse(preparsedElement.projectAs)[0] :
             elementCssSelector;
-        const /** @type {?} */ ngContentIndex = parent.findNgContentIndex(projectionSelector);
+        const /** @type {?} */ ngContentIndex = ((parent.findNgContentIndex(projectionSelector)));
         let /** @type {?} */ parsedElement;
         if (preparsedElement.type === PreparsedElementType.NG_CONTENT) {
             if (element.children && !element.children.every(_isEmptyTextNode)) {
-                this._reportError(`<ng-content> element cannot have content.`, element.sourceSpan);
+                this._reportError(`<ng-content> element cannot have content.`, /** @type {?} */ ((element.sourceSpan)));
             }
-            parsedElement = new NgContentAst(this.ngContentCount++, hasInlineTemplates ? null : ngContentIndex, element.sourceSpan);
+            parsedElement = new NgContentAst(this.ngContentCount++, hasInlineTemplates ? ((null)) : ngContentIndex, /** @type {?} */ ((element.sourceSpan)));
         }
         else if (isTemplateElement) {
             this._assertAllEventsPublishedByDirectives(directiveAsts, events);
-            this._assertNoComponentsNorElementBindingsOnTemplate(directiveAsts, elementProps, element.sourceSpan);
-            parsedElement = new EmbeddedTemplateAst(attrs, events, references, elementVars, providerContext.transformedDirectiveAsts, providerContext.transformProviders, providerContext.transformedHasViewContainer, providerContext.queryMatches, children, hasInlineTemplates ? null : ngContentIndex, element.sourceSpan);
+            this._assertNoComponentsNorElementBindingsOnTemplate(directiveAsts, elementProps, /** @type {?} */ ((element.sourceSpan)));
+            parsedElement = new EmbeddedTemplateAst(attrs, events, references, elementVars, providerContext.transformedDirectiveAsts, providerContext.transformProviders, providerContext.transformedHasViewContainer, providerContext.queryMatches, children, hasInlineTemplates ? ((null)) : ngContentIndex, /** @type {?} */ ((element.sourceSpan)));
         }
         else {
             this._assertElementExists(matchElement, element);
-            this._assertOnlyOneComponent(directiveAsts, element.sourceSpan);
+            this._assertOnlyOneComponent(directiveAsts, /** @type {?} */ ((element.sourceSpan)));
             const /** @type {?} */ ngContentIndex = hasInlineTemplates ? null : parent.findNgContentIndex(projectionSelector);
-            parsedElement = new ElementAst(nodeName, attrs, elementProps, events, references, providerContext.transformedDirectiveAsts, providerContext.transformProviders, providerContext.transformedHasViewContainer, providerContext.queryMatches, children, hasInlineTemplates ? null : ngContentIndex, element.sourceSpan, element.endSourceSpan);
+            parsedElement = new ElementAst(nodeName, attrs, elementProps, events, references, providerContext.transformedDirectiveAsts, providerContext.transformProviders, providerContext.transformedHasViewContainer, providerContext.queryMatches, children, hasInlineTemplates ? null : ngContentIndex, element.sourceSpan, element.endSourceSpan || null);
         }
         if (hasInlineTemplates) {
             const /** @type {?} */ templateQueryStartIndex = this.contentQueryStartId;
             const /** @type {?} */ templateSelector = createElementCssSelector(TEMPLATE_ELEMENT, templateMatchableAttrs);
             const { directives: templateDirectiveMetas } = this._parseDirectives(this.selectorMatcher, templateSelector);
             const /** @type {?} */ templateBoundDirectivePropNames = new Set();
-            const /** @type {?} */ templateDirectiveAsts = this._createDirectiveAsts(true, element.name, templateDirectiveMetas, templateElementOrDirectiveProps, [], element.sourceSpan, [], templateBoundDirectivePropNames);
+            const /** @type {?} */ templateDirectiveAsts = this._createDirectiveAsts(true, element.name, templateDirectiveMetas, templateElementOrDirectiveProps, [], /** @type {?} */ ((element.sourceSpan)), [], templateBoundDirectivePropNames);
             const /** @type {?} */ templateElementProps = this._createElementPropertyAsts(element.name, templateElementOrDirectiveProps, templateBoundDirectivePropNames);
-            this._assertNoComponentsNorElementBindingsOnTemplate(templateDirectiveAsts, templateElementProps, element.sourceSpan);
-            const /** @type {?} */ templateProviderContext = new ProviderElementContext(this.providerViewContext, parent.providerContext, parent.isTemplateElement, templateDirectiveAsts, [], [], true, templateQueryStartIndex, element.sourceSpan);
+            this._assertNoComponentsNorElementBindingsOnTemplate(templateDirectiveAsts, templateElementProps, /** @type {?} */ ((element.sourceSpan)));
+            const /** @type {?} */ templateProviderContext = new ProviderElementContext(this.providerViewContext, /** @type {?} */ ((parent.providerContext)), parent.isTemplateElement, templateDirectiveAsts, [], [], true, templateQueryStartIndex, /** @type {?} */ ((element.sourceSpan)));
             templateProviderContext.afterElement();
-            parsedElement = new EmbeddedTemplateAst([], [], [], templateElementVars, templateProviderContext.transformedDirectiveAsts, templateProviderContext.transformProviders, templateProviderContext.transformedHasViewContainer, templateProviderContext.queryMatches, [parsedElement], ngContentIndex, element.sourceSpan);
+            parsedElement = new EmbeddedTemplateAst([], [], [], templateElementVars, templateProviderContext.transformedDirectiveAsts, templateProviderContext.transformProviders, templateProviderContext.transformedHasViewContainer, templateProviderContext.queryMatches, [parsedElement], ngContentIndex, /** @type {?} */ ((element.sourceSpan)));
         }
         return parsedElement;
     }
@@ -33098,7 +33636,7 @@ class TemplateParseVisitor {
         // Whether any directive selector matches on the element name
         let /** @type {?} */ matchElement = false;
         selectorMatcher.match(elementCssSelector, (selector, directive) => {
-            directives[this.directivesIndex.get(directive)] = directive;
+            directives[((this.directivesIndex.get(directive)))] = directive;
             matchElement = matchElement || selector.hasElementSelector();
         });
         return {
@@ -33119,18 +33657,18 @@ class TemplateParseVisitor {
      */
     _createDirectiveAsts(isTemplateElement, elementName, directives, props, elementOrDirectiveRefs, elementSourceSpan, targetReferences, targetBoundDirectivePropNames) {
         const /** @type {?} */ matchedReferences = new Set();
-        let /** @type {?} */ component = null;
+        let /** @type {?} */ component = ((null));
         const /** @type {?} */ directiveAsts = directives.map((directive) => {
             const /** @type {?} */ sourceSpan = new ParseSourceSpan(elementSourceSpan.start, elementSourceSpan.end, `Directive ${identifierName(directive.type)}`);
             if (directive.isComponent) {
                 component = directive;
             }
             const /** @type {?} */ directiveProperties = [];
-            let /** @type {?} */ hostProperties = this._bindingParser.createDirectiveHostPropertyAsts(directive, elementName, sourceSpan);
+            let /** @type {?} */ hostProperties = ((this._bindingParser.createDirectiveHostPropertyAsts(directive, elementName, sourceSpan)));
             // Note: We need to check the host properties here as well,
             // as we don't know the element name in the DirectiveWrapperCompiler yet.
             hostProperties = this._checkPropertiesInSchema(elementName, hostProperties);
-            const /** @type {?} */ hostEvents = this._bindingParser.createDirectiveHostEventAsts(directive, sourceSpan);
+            const /** @type {?} */ hostEvents = ((this._bindingParser.createDirectiveHostEventAsts(directive, sourceSpan)));
             this._createDirectivePropertyAsts(directive.inputs, props, directiveProperties, targetBoundDirectivePropNames);
             elementOrDirectiveRefs.forEach((elOrDirRef) => {
                 if ((elOrDirRef.value.length === 0 && directive.isComponent) ||
@@ -33150,7 +33688,7 @@ class TemplateParseVisitor {
                 }
             }
             else if (!component) {
-                let /** @type {?} */ refToken = null;
+                let /** @type {?} */ refToken = ((null));
                 if (isTemplateElement) {
                     refToken = createIdentifierToken(Identifiers.TemplateRef);
                 }
@@ -33217,7 +33755,7 @@ class TemplateParseVisitor {
      */
     _findComponentDirectiveNames(directives) {
         return this._findComponentDirectives(directives)
-            .map(directive => identifierName(directive.directive.type));
+            .map(directive => ((identifierName(directive.directive.type))));
     }
     /**
      * @param {?} directives
@@ -33256,7 +33794,7 @@ class TemplateParseVisitor {
                 errorMsg +=
                     `2. To allow any element add 'NO_ERRORS_SCHEMA' to the '@NgModule.schemas' of this component.`;
             }
-            this._reportError(errorMsg, element.sourceSpan);
+            this._reportError(errorMsg, /** @type {?} */ ((element.sourceSpan)));
         }
     }
     /**
@@ -33373,8 +33911,8 @@ class NonBindableVisitor {
      * @return {?}
      */
     visitText(text, parent) {
-        const /** @type {?} */ ngContentIndex = parent.findNgContentIndex(TEXT_CSS_SELECTOR);
-        return new TextAst(text.value, ngContentIndex, text.sourceSpan);
+        const /** @type {?} */ ngContentIndex = ((parent.findNgContentIndex(TEXT_CSS_SELECTOR)));
+        return new TextAst(text.value, ngContentIndex, /** @type {?} */ ((text.sourceSpan)));
     }
     /**
      * @param {?} expansion
@@ -33429,10 +33967,10 @@ class ElementContext {
      */
     static create(isTemplateElement, directives, providerContext) {
         const /** @type {?} */ matcher = new SelectorMatcher();
-        let /** @type {?} */ wildcardNgContentIndex = null;
+        let /** @type {?} */ wildcardNgContentIndex = ((null));
         const /** @type {?} */ component = directives.find(directive => directive.directive.isComponent);
         if (component) {
-            const /** @type {?} */ ngContentSelectors = component.directive.template.ngContentSelectors;
+            const /** @type {?} */ ngContentSelectors = ((component.directive.template)).ngContentSelectors;
             for (let /** @type {?} */ i = 0; i < ngContentSelectors.length; i++) {
                 const /** @type {?} */ selector = ngContentSelectors[i];
                 if (selector === '*') {
@@ -33520,18 +34058,17 @@ function isEmptyExpression(ast) {
  * @return {?}
  */
 function isTemplate(el, enableLegacyTemplate, reportDeprecation) {
-    const /** @type {?} */ tagNoNs = splitNsName(el.name)[1];
-    // `<ng-template>` is an angular construct and is lower case
-    if (tagNoNs === NG_TEMPLATE_ELEMENT)
+    if (isNgTemplate(el.name))
         return true;
+    const /** @type {?} */ tagNoNs = splitNsName(el.name)[1];
     // `<template>` is HTML and case insensitive
     if (tagNoNs.toLowerCase() === TEMPLATE_ELEMENT) {
         if (enableLegacyTemplate && tagNoNs.toLowerCase() === TEMPLATE_ELEMENT) {
-            reportDeprecation(TEMPLATE_ELEMENT_DEPRECATION_WARNING, el.sourceSpan);
+            reportDeprecation(TEMPLATE_ELEMENT_DEPRECATION_WARNING, /** @type {?} */ ((el.sourceSpan)));
             return true;
         }
-        return false;
     }
+    return false;
 }
 
 /**
@@ -33774,7 +34311,7 @@ _ComponentIndex[_ComponentIndex.Fragment] = "Fragment";
  *     arbitrary strings may still look like path names.
  */
 function _split(uri) {
-    return uri.match(_splitRe);
+    return ((uri.match(_splitRe)));
 }
 /**
  * Removes dot segments in given path component, as described in
@@ -33895,8 +34432,9 @@ class DirectiveNormalizer {
         if (!normalizedDirective.isComponent) {
             return;
         }
-        this._resourceLoaderCache.delete(normalizedDirective.template.templateUrl);
-        normalizedDirective.template.externalStylesheets.forEach((stylesheet) => { this._resourceLoaderCache.delete(stylesheet.moduleUrl); });
+        const /** @type {?} */ template = ((normalizedDirective.template));
+        this._resourceLoaderCache.delete(/** @type {?} */ ((template.templateUrl)));
+        template.externalStylesheets.forEach((stylesheet) => { this._resourceLoaderCache.delete(/** @type {?} */ ((stylesheet.moduleUrl))); });
     }
     /**
      * @param {?} url
@@ -33905,7 +34443,7 @@ class DirectiveNormalizer {
     _fetch(url) {
         let /** @type {?} */ result = this._resourceLoaderCache.get(url);
         if (!result) {
-            result = this._resourceLoader.get(url);
+            result = ((this._resourceLoader.get(url)));
             this._resourceLoaderCache.set(url, result);
         }
         return result;
@@ -33915,19 +34453,19 @@ class DirectiveNormalizer {
      * @return {?}
      */
     normalizeTemplate(prenormData) {
-        let /** @type {?} */ normalizedTemplateSync = null;
-        let /** @type {?} */ normalizedTemplateAsync;
-        if (prenormData.template != null) {
-            if (prenormData.templateUrl != null) {
+        let /** @type {?} */ normalizedTemplateSync = ((null));
+        let /** @type {?} */ normalizedTemplateAsync = ((undefined));
+        if (isDefined(prenormData.template)) {
+            if (isDefined(prenormData.templateUrl)) {
                 throw syntaxError(`'${stringify(prenormData.componentType)}' component cannot define both template and templateUrl`);
             }
             if (typeof prenormData.template !== 'string') {
                 throw syntaxError(`The template specified for component ${stringify(prenormData.componentType)} is not a string`);
             }
             normalizedTemplateSync = this.normalizeTemplateSync(prenormData);
-            normalizedTemplateAsync = Promise.resolve(normalizedTemplateSync);
+            normalizedTemplateAsync = Promise.resolve(/** @type {?} */ ((normalizedTemplateSync)));
         }
-        else if (prenormData.templateUrl) {
+        else if (isDefined(prenormData.templateUrl)) {
             if (typeof prenormData.templateUrl !== 'string') {
                 throw syntaxError(`The templateUrl specified for component ${stringify(prenormData.componentType)} is not a string`);
             }
@@ -33950,14 +34488,14 @@ class DirectiveNormalizer {
      * @return {?}
      */
     normalizeTemplateSync(prenomData) {
-        return this.normalizeLoadedTemplate(prenomData, prenomData.template, prenomData.moduleUrl);
+        return this.normalizeLoadedTemplate(prenomData, /** @type {?} */ ((prenomData.template)), prenomData.moduleUrl);
     }
     /**
      * @param {?} prenomData
      * @return {?}
      */
     normalizeTemplateAsync(prenomData) {
-        const /** @type {?} */ templateUrl = this._urlResolver.resolve(prenomData.moduleUrl, prenomData.templateUrl);
+        const /** @type {?} */ templateUrl = this._urlResolver.resolve(prenomData.moduleUrl, /** @type {?} */ ((prenomData.templateUrl)));
         return this._fetch(templateUrl)
             .then((value) => this.normalizeLoadedTemplate(prenomData, value, templateUrl));
     }
@@ -33969,7 +34507,7 @@ class DirectiveNormalizer {
      */
     normalizeLoadedTemplate(prenormData, template, templateAbsUrl) {
         const /** @type {?} */ isInline = !!prenormData.template;
-        const /** @type {?} */ interpolationConfig = InterpolationConfig.fromArray(prenormData.interpolation);
+        const /** @type {?} */ interpolationConfig = InterpolationConfig.fromArray(/** @type {?} */ ((prenormData.interpolation)));
         const /** @type {?} */ rootNodesAndErrors = this._htmlParser.parse(template, templateSourceUrl({ reference: prenormData.ngModuleType }, { type: { reference: prenormData.componentType } }, { isInline, templateUrl: templateAbsUrl }), true, interpolationConfig);
         if (rootNodesAndErrors.errors.length > 0) {
             const /** @type {?} */ errorString = rootNodesAndErrors.errors.join('\n');
@@ -33999,7 +34537,8 @@ class DirectiveNormalizer {
             templateUrl: templateAbsUrl, styles, styleUrls,
             ngContentSelectors: visitor.ngContentSelectors,
             animations: prenormData.animations,
-            interpolation: prenormData.interpolation, isInline
+            interpolation: prenormData.interpolation, isInline,
+            externalStylesheets: []
         });
     }
     /**
@@ -34041,14 +34580,15 @@ class DirectiveNormalizer {
      * @return {?}
      */
     normalizeStylesheet(stylesheet) {
+        const /** @type {?} */ moduleUrl = ((stylesheet.moduleUrl));
         const /** @type {?} */ allStyleUrls = stylesheet.styleUrls.filter(isStyleUrlResolvable)
-            .map(url => this._urlResolver.resolve(stylesheet.moduleUrl, url));
+            .map(url => this._urlResolver.resolve(moduleUrl, url));
         const /** @type {?} */ allStyles = stylesheet.styles.map(style$$1$$1 => {
-            const /** @type {?} */ styleWithImports = extractStyleUrls(this._urlResolver, stylesheet.moduleUrl, style$$1$$1);
+            const /** @type {?} */ styleWithImports = extractStyleUrls(this._urlResolver, moduleUrl, style$$1$$1);
             allStyleUrls.push(...styleWithImports.styleUrls);
             return styleWithImports.style;
         });
-        return new CompileStylesheetMetadata({ styles: allStyles, styleUrls: allStyleUrls, moduleUrl: stylesheet.moduleUrl });
+        return new CompileStylesheetMetadata({ styles: allStyles, styleUrls: allStyleUrls, moduleUrl: moduleUrl });
     }
 }
 DirectiveNormalizer.decorators = [
@@ -34172,7 +34712,6 @@ class DirectiveResolver {
         return typeMetadata && typeMetadata.some(isDirectiveMetadata);
     }
     /**
-     * Return {\@link Directive} for a given `Type`.
      * @param {?} type
      * @param {?=} throwIfNotFound
      * @return {?}
@@ -34253,7 +34792,7 @@ class DirectiveResolver {
      * @param {?} def
      * @return {?}
      */
-    _extractPublicName(def) { return splitAtColon(def, [null, def])[1].trim(); }
+    _extractPublicName(def) { return splitAtColon(def, [/** @type {?} */ ((null)), def])[1].trim(); }
     /**
      * @param {?} bindings
      * @return {?}
@@ -34766,7 +35305,7 @@ class CompileMetadataResolver {
         if (!typeSummary) {
             const /** @type {?} */ summary = this._summaryResolver.resolveSummary(type);
             typeSummary = summary ? summary.type : null;
-            this._summaryCache.set(type, typeSummary);
+            this._summaryCache.set(type, typeSummary || null);
         }
         return typeSummary && typeSummary.summaryKind === kind ? typeSummary : null;
     }
@@ -34778,12 +35317,13 @@ class CompileMetadataResolver {
      */
     _loadDirectiveMetadata(ngModuleType, directiveType, isSync) {
         if (this._directiveCache.has(directiveType)) {
-            return;
+            return null;
         }
         directiveType = resolveForwardRef(directiveType);
-        const { annotation, metadata } = this.getNonNormalizedDirectiveMetadata(directiveType);
+        const { annotation, metadata } = ((this.getNonNormalizedDirectiveMetadata(directiveType)));
         const /** @type {?} */ createDirectiveMetadata = (templateMetadata) => {
             const /** @type {?} */ normalizedDirMeta = new CompileDirectiveMetadata({
+                isHost: false,
                 type: metadata.type,
                 isComponent: metadata.isComponent,
                 selector: metadata.selector,
@@ -34805,24 +35345,25 @@ class CompileMetadataResolver {
                 template: templateMetadata
             });
             if (templateMetadata) {
-                this.initComponentFactory(metadata.componentFactory, templateMetadata.ngContentSelectors);
+                this.initComponentFactory(/** @type {?} */ ((metadata.componentFactory)), templateMetadata.ngContentSelectors);
             }
             this._directiveCache.set(directiveType, normalizedDirMeta);
             this._summaryCache.set(directiveType, normalizedDirMeta.toSummary());
             return normalizedDirMeta;
         };
         if (metadata.isComponent) {
+            const /** @type {?} */ template = ((metadata.template));
             const /** @type {?} */ templateMeta = this._directiveNormalizer.normalizeTemplate({
                 ngModuleType,
                 componentType: directiveType,
                 moduleUrl: componentModuleUrl(this._reflector, directiveType, annotation),
-                encapsulation: metadata.template.encapsulation,
-                template: metadata.template.template,
-                templateUrl: metadata.template.templateUrl,
-                styles: metadata.template.styles,
-                styleUrls: metadata.template.styleUrls,
-                animations: metadata.template.animations,
-                interpolation: metadata.template.interpolation
+                encapsulation: template.encapsulation,
+                template: template.template,
+                templateUrl: template.templateUrl,
+                styles: template.styles,
+                styleUrls: template.styleUrls,
+                animations: template.animations,
+                interpolation: template.interpolation
             });
             if (templateMeta.syncResult) {
                 createDirectiveMetadata(templateMeta.syncResult);
@@ -34833,7 +35374,7 @@ class CompileMetadataResolver {
                     this._reportError(componentStillLoadingError(directiveType), directiveType);
                     return null;
                 }
-                return templateMeta.asyncResult.then(createDirectiveMetadata);
+                return ((templateMeta.asyncResult)).then(createDirectiveMetadata);
             }
         }
         else {
@@ -34859,7 +35400,7 @@ class CompileMetadataResolver {
         if (!dirMeta) {
             return null;
         }
-        let /** @type {?} */ nonNormalizedTemplateMetadata;
+        let /** @type {?} */ nonNormalizedTemplateMetadata = ((undefined));
         if (dirMeta instanceof Component) {
             // component
             assertArrayOfStrings('styles', dirMeta.styles);
@@ -34867,29 +35408,31 @@ class CompileMetadataResolver {
             assertInterpolationSymbols('interpolation', dirMeta.interpolation);
             const /** @type {?} */ animations = dirMeta.animations;
             nonNormalizedTemplateMetadata = new CompileTemplateMetadata({
-                encapsulation: dirMeta.encapsulation,
-                template: dirMeta.template,
-                templateUrl: dirMeta.templateUrl,
-                styles: dirMeta.styles,
-                styleUrls: dirMeta.styleUrls,
-                animations: animations,
-                interpolation: dirMeta.interpolation,
-                isInline: !!dirMeta.template
+                encapsulation: noUndefined(dirMeta.encapsulation),
+                template: noUndefined(dirMeta.template),
+                templateUrl: noUndefined(dirMeta.templateUrl),
+                styles: dirMeta.styles || [],
+                styleUrls: dirMeta.styleUrls || [],
+                animations: animations || [],
+                interpolation: noUndefined(dirMeta.interpolation),
+                isInline: !!dirMeta.template,
+                externalStylesheets: [],
+                ngContentSelectors: []
             });
         }
-        let /** @type {?} */ changeDetectionStrategy = null;
+        let /** @type {?} */ changeDetectionStrategy = ((null));
         let /** @type {?} */ viewProviders = [];
         let /** @type {?} */ entryComponentMetadata = [];
         let /** @type {?} */ selector = dirMeta.selector;
         if (dirMeta instanceof Component) {
             // Component
-            changeDetectionStrategy = dirMeta.changeDetection;
+            changeDetectionStrategy = ((dirMeta.changeDetection));
             if (dirMeta.viewProviders) {
                 viewProviders = this._getProvidersMetadata(dirMeta.viewProviders, entryComponentMetadata, `viewProviders for "${stringifyType(directiveType)}"`, [], directiveType);
             }
             if (dirMeta.entryComponents) {
                 entryComponentMetadata = flattenAndDedupeArray(dirMeta.entryComponents)
-                    .map((type) => this._getEntryComponentMetadata(type))
+                    .map((type) => ((this._getEntryComponentMetadata(type))))
                     .concat(entryComponentMetadata);
             }
             if (!selector) {
@@ -34914,24 +35457,25 @@ class CompileMetadataResolver {
             viewQueries = this._getQueriesMetadata(dirMeta.queries, true, directiveType);
         }
         const /** @type {?} */ metadata = CompileDirectiveMetadata.create({
+            isHost: false,
             selector: selector,
-            exportAs: dirMeta.exportAs,
+            exportAs: noUndefined(dirMeta.exportAs),
             isComponent: !!nonNormalizedTemplateMetadata,
             type: this._getTypeMetadata(directiveType),
             template: nonNormalizedTemplateMetadata,
             changeDetection: changeDetectionStrategy,
-            inputs: dirMeta.inputs,
-            outputs: dirMeta.outputs,
-            host: dirMeta.host,
-            providers: providers,
-            viewProviders: viewProviders,
-            queries: queries,
-            viewQueries: viewQueries,
+            inputs: dirMeta.inputs || [],
+            outputs: dirMeta.outputs || [],
+            host: dirMeta.host || {},
+            providers: providers || [],
+            viewProviders: viewProviders || [],
+            queries: queries || [],
+            viewQueries: viewQueries || [],
             entryComponents: entryComponentMetadata,
             componentViewType: nonNormalizedTemplateMetadata ? this.getComponentViewClass(directiveType) :
-                undefined,
-            rendererType: nonNormalizedTemplateMetadata ? this.getRendererType(directiveType) : undefined,
-            componentFactory: undefined
+                null,
+            rendererType: nonNormalizedTemplateMetadata ? this.getRendererType(directiveType) : null,
+            componentFactory: null
         });
         if (nonNormalizedTemplateMetadata) {
             metadata.componentFactory =
@@ -34948,7 +35492,7 @@ class CompileMetadataResolver {
      * @return {?}
      */
     getDirectiveMetadata(directiveType) {
-        const /** @type {?} */ dirMeta = this._directiveCache.get(directiveType);
+        const /** @type {?} */ dirMeta = ((this._directiveCache.get(directiveType)));
         if (!dirMeta) {
             this._reportError(syntaxError(`Illegal state: getDirectiveMetadata can only be called after loadNgModuleDirectiveAndPipeMetadata for a module that declares it. Directive ${stringifyType(directiveType)}.`), directiveType);
         }
@@ -35037,7 +35581,7 @@ class CompileMetadataResolver {
         const /** @type {?} */ schemas = [];
         if (meta.imports) {
             flattenAndDedupeArray(meta.imports).forEach((importedType) => {
-                let /** @type {?} */ importedModuleType;
+                let /** @type {?} */ importedModuleType = ((undefined));
                 if (isValidType(importedType)) {
                     importedModuleType = importedType;
                 }
@@ -35119,6 +35663,7 @@ class CompileMetadataResolver {
             }
             else {
                 this._reportError(syntaxError(`Can't export ${this._getTypeDescriptor(exportedId.reference)} ${stringifyType(exportedId.reference)} from ${stringifyType(moduleType)} as it was neither declared nor imported!`), moduleType);
+                return;
             }
         });
         // The providers of the module have to go last
@@ -35128,7 +35673,7 @@ class CompileMetadataResolver {
         }
         if (meta.entryComponents) {
             entryComponents.push(...flattenAndDedupeArray(meta.entryComponents)
-                .map(type => this._getEntryComponentMetadata(type)));
+                .map(type => ((this._getEntryComponentMetadata(type)))));
         }
         if (meta.bootstrap) {
             flattenAndDedupeArray(meta.bootstrap).forEach(type => {
@@ -35139,7 +35684,7 @@ class CompileMetadataResolver {
                 bootstrapComponents.push(this._getIdentifierMetadata(type));
             });
         }
-        entryComponents.push(...bootstrapComponents.map(type => this._getEntryComponentMetadata(type.reference)));
+        entryComponents.push(...bootstrapComponents.map(type => ((this._getEntryComponentMetadata(type.reference)))));
         if (meta.schemas) {
             schemas.push(...flattenAndDedupeArray(meta.schemas));
         }
@@ -35156,10 +35701,10 @@ class CompileMetadataResolver {
             importedModules,
             exportedModules,
             transitiveModule,
-            id: meta.id,
+            id: meta.id || null,
         });
         entryComponents.forEach((id) => transitiveModule.addEntryComponent(id));
-        providers.forEach((provider) => transitiveModule.addProvider(provider, compileMeta.type));
+        providers.forEach((provider) => transitiveModule.addProvider(provider, /** @type {?} */ ((compileMeta)).type));
         transitiveModule.addModule(compileMeta.type);
         this._ngModuleCache.set(moduleType, compileMeta);
         return compileMeta;
@@ -35206,6 +35751,7 @@ class CompileMetadataResolver {
             this._reportError(syntaxError(`Type ${stringifyType(type)} is part of the declarations of 2 modules: ${stringifyType(oldModule)} and ${stringifyType(moduleType)}! ` +
                 `Please consider moving ${stringifyType(type)} to a higher module that imports ${stringifyType(oldModule)} and ${stringifyType(moduleType)}. ` +
                 `You can also create a new NgModule that exports and includes ${stringifyType(type)} then import that NgModule in ${stringifyType(oldModule)} and ${stringifyType(moduleType)}.`), moduleType);
+            return;
         }
         this._ngModuleOfTypes.set(type, moduleType);
     }
@@ -35323,7 +35869,7 @@ class CompileMetadataResolver {
         if (!pipeMeta) {
             this._reportError(syntaxError(`Illegal state: getPipeMetadata can only be called after loadNgModuleDirectiveAndPipeMetadata for a module that declares it. Pipe ${stringifyType(pipeType)}.`), pipeType);
         }
-        return pipeMeta;
+        return pipeMeta || null;
     }
     /**
      * @param {?} pipeType
@@ -35353,11 +35899,11 @@ class CompileMetadataResolver {
      */
     _loadPipeMetadata(pipeType) {
         pipeType = resolveForwardRef(pipeType);
-        const /** @type {?} */ pipeAnnotation = this._pipeResolver.resolve(pipeType);
+        const /** @type {?} */ pipeAnnotation = ((this._pipeResolver.resolve(pipeType)));
         const /** @type {?} */ pipeMeta = new CompilePipeMetadata({
             type: this._getTypeMetadata(pipeType),
             name: pipeAnnotation.name,
-            pure: pipeAnnotation.pure
+            pure: !!pipeAnnotation.pure
         });
         this._pipeCache.set(pipeType, pipeMeta);
         this._summaryCache.set(pipeType, pipeMeta.toSummary());
@@ -35413,7 +35959,7 @@ class CompileMetadataResolver {
             }
             if (token == null) {
                 hasUnknownDeps = true;
-                return null;
+                return ((null));
             }
             return {
                 isAttribute,
@@ -35466,7 +36012,7 @@ class CompileMetadataResolver {
             }
             else {
                 provider = resolveForwardRef(provider);
-                let /** @type {?} */ providerMeta;
+                let /** @type {?} */ providerMeta = ((undefined));
                 if (provider && typeof provider === 'object' && provider.hasOwnProperty('provide')) {
                     this._validateProvider(provider);
                     providerMeta = new ProviderMeta(provider.provide, provider);
@@ -35476,6 +36022,7 @@ class CompileMetadataResolver {
                 }
                 else if (provider === void 0) {
                     this._reportError(syntaxError(`Encountered undefined provider! Usually this means you have a circular dependencies (might be caused by using 'barrel' index.ts files.`));
+                    return;
                 }
                 else {
                     const /** @type {?} */ providersInfo = ((providers.reduce((soFar, seenProvider, seenProviderIdx) => {
@@ -35492,6 +36039,7 @@ class CompileMetadataResolver {
                     }, [])))
                         .join(', ');
                     this._reportError(syntaxError(`Invalid ${debugInfo ? debugInfo : 'provider'} - only instances of Provider and Type are allowed, got: [${providersInfo}]`), type);
+                    return;
                 }
                 if (providerMeta.token === resolveIdentifier(Identifiers.ANALYZE_FOR_ENTRY_COMPONENTS)) {
                     targetEntryComponents.push(...this._getEntryComponentsFromProvider(providerMeta, type));
@@ -35548,26 +36096,25 @@ class CompileMetadataResolver {
     _getEntryComponentMetadata(dirType, throwIfNotFound = true) {
         const /** @type {?} */ dirMeta = this.getNonNormalizedDirectiveMetadata(dirType);
         if (dirMeta && dirMeta.metadata.isComponent) {
-            return { componentType: dirType, componentFactory: dirMeta.metadata.componentFactory };
+            return { componentType: dirType, componentFactory: /** @type {?} */ ((dirMeta.metadata.componentFactory)) };
         }
-        else {
-            const /** @type {?} */ dirSummary = (this._loadSummary(dirType, CompileSummaryKind.Directive));
-            if (dirSummary && dirSummary.isComponent) {
-                return { componentType: dirType, componentFactory: dirSummary.componentFactory };
-            }
+        const /** @type {?} */ dirSummary = (this._loadSummary(dirType, CompileSummaryKind.Directive));
+        if (dirSummary && dirSummary.isComponent) {
+            return { componentType: dirType, componentFactory: /** @type {?} */ ((dirSummary.componentFactory)) };
         }
         if (throwIfNotFound) {
             throw syntaxError(`${dirType.name} cannot be used as an entry component.`);
         }
+        return null;
     }
     /**
      * @param {?} provider
      * @return {?}
      */
     getProviderMetadata(provider) {
-        let /** @type {?} */ compileDeps;
-        let /** @type {?} */ compileTypeMetadata = null;
-        let /** @type {?} */ compileFactoryMetadata = null;
+        let /** @type {?} */ compileDeps = ((undefined));
+        let /** @type {?} */ compileTypeMetadata = ((null));
+        let /** @type {?} */ compileFactoryMetadata = ((null));
         let /** @type {?} */ token = this._getTokenMetadata(provider.token);
         if (provider.useClass) {
             compileTypeMetadata = this._getInjectableMetadata(provider.useClass, provider.dependencies);
@@ -35586,7 +36133,7 @@ class CompileMetadataResolver {
             useClass: compileTypeMetadata,
             useValue: provider.useValue,
             useFactory: compileFactoryMetadata,
-            useExisting: provider.useExisting ? this._getTokenMetadata(provider.useExisting) : null,
+            useExisting: provider.useExisting ? this._getTokenMetadata(provider.useExisting) : undefined,
             deps: compileDeps,
             multi: provider.multi
         };
@@ -35627,14 +36174,17 @@ class CompileMetadataResolver {
         else {
             if (!q.selector) {
                 this._reportError(syntaxError(`Can't construct a query for the property "${propertyName}" of "${stringifyType(typeOrFunc)}" since the query selector wasn't defined.`), typeOrFunc);
+                selectors = [];
             }
-            selectors = [this._getTokenMetadata(q.selector)];
+            else {
+                selectors = [this._getTokenMetadata(q.selector)];
+            }
         }
         return {
             selectors,
             first: q.first,
             descendants: q.descendants, propertyName,
-            read: q.read ? this._getTokenMetadata(q.read) : null
+            read: q.read ? this._getTokenMetadata(q.read) : ((null))
         };
     }
     /**
@@ -35736,7 +36286,7 @@ function componentModuleUrl(reflector$$1, type, cmpMetadata) {
         throw syntaxError(`moduleId should be a string in "${stringifyType(type)}". See https://goo.gl/wIDDiL for more information.\n` +
             `If you're using Webpack you should inline the template and the styles, see https://goo.gl/X2J8zc.`);
     }
-    return reflector$$1.importUri(type);
+    return ((reflector$$1.importUri(type)));
 }
 /**
  * @param {?} value
@@ -35813,7 +36363,7 @@ class Type$1 {
      * @param {?} modifier
      * @return {?}
      */
-    hasModifier(modifier) { return this.modifiers.indexOf(modifier) !== -1; }
+    hasModifier(modifier) { return ((this.modifiers)).indexOf(modifier) !== -1; }
 }
 let BuiltinTypeName = {};
 BuiltinTypeName.Dynamic = 0;
@@ -35891,7 +36441,7 @@ class MapType extends Type$1 {
      */
     constructor(valueType, modifiers = null) {
         super(modifiers);
-        this.valueType = valueType;
+        this.valueType = valueType || null;
     }
     /**
      * @param {?} visitor
@@ -35947,8 +36497,8 @@ class Expression {
      * @param {?=} sourceSpan
      */
     constructor(type, sourceSpan) {
-        this.type = type;
-        this.sourceSpan = sourceSpan;
+        this.type = type || null;
+        this.sourceSpan = sourceSpan || null;
     }
     /**
      * @abstract
@@ -35971,7 +36521,7 @@ class Expression {
      * @param {?=} sourceSpan
      * @return {?}
      */
-    key(index, type = null, sourceSpan) {
+    key(index, type, sourceSpan) {
         return new ReadKeyExpr(this, index, type, sourceSpan);
     }
     /**
@@ -35997,7 +36547,7 @@ class Expression {
      * @param {?=} sourceSpan
      * @return {?}
      */
-    instantiate(params, type = null, sourceSpan) {
+    instantiate(params, type, sourceSpan) {
         return new InstantiateExpr(this, params, type, sourceSpan);
     }
     /**
@@ -36149,7 +36699,7 @@ class Expression {
     /**
      * @return {?}
      */
-    toStmt() { return new ExpressionStatement(this); }
+    toStmt() { return new ExpressionStatement(this, null); }
 }
 let BuiltinVar = {};
 BuiltinVar.This = 0;
@@ -36166,7 +36716,7 @@ class ReadVarExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(name, type = null, sourceSpan) {
+    constructor(name, type, sourceSpan) {
         super(type, sourceSpan);
         if (typeof name === 'string') {
             this.name = name;
@@ -36190,6 +36740,9 @@ class ReadVarExpr extends Expression {
      * @return {?}
      */
     set(value) {
+        if (!this.name) {
+            throw new Error(`Built in variable ${this.builtin} can not be assigned to.`);
+        }
         return new WriteVarExpr(this.name, value, null, this.sourceSpan);
     }
 }
@@ -36200,7 +36753,7 @@ class WriteVarExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(name, value, type = null, sourceSpan) {
+    constructor(name, value, type, sourceSpan) {
         super(type || value.type, sourceSpan);
         this.name = name;
         this.value = value;
@@ -36218,7 +36771,7 @@ class WriteVarExpr extends Expression {
      * @param {?=} modifiers
      * @return {?}
      */
-    toDeclStmt(type = null, modifiers = null) {
+    toDeclStmt(type, modifiers) {
         return new DeclareVarStmt(this.name, this.value, type, modifiers, this.sourceSpan);
     }
 }
@@ -36230,7 +36783,7 @@ class WriteKeyExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(receiver, index, value, type = null, sourceSpan) {
+    constructor(receiver, index, value, type, sourceSpan) {
         super(type || value.type, sourceSpan);
         this.receiver = receiver;
         this.index = index;
@@ -36253,7 +36806,7 @@ class WritePropExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(receiver, name, value, type = null, sourceSpan) {
+    constructor(receiver, name, value, type, sourceSpan) {
         super(type || value.type, sourceSpan);
         this.receiver = receiver;
         this.name = name;
@@ -36283,7 +36836,7 @@ class InvokeMethodExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(receiver, method, args, type = null, sourceSpan) {
+    constructor(receiver, method, args, type, sourceSpan) {
         super(type, sourceSpan);
         this.receiver = receiver;
         this.args = args;
@@ -36312,7 +36865,7 @@ class InvokeFunctionExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(fn, args, type = null, sourceSpan) {
+    constructor(fn, args, type, sourceSpan) {
         super(type, sourceSpan);
         this.fn = fn;
         this.args = args;
@@ -36353,7 +36906,7 @@ class LiteralExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(value, type = null, sourceSpan) {
+    constructor(value, type, sourceSpan) {
         super(type, sourceSpan);
         this.value = value;
     }
@@ -36373,7 +36926,7 @@ class ExternalExpr extends Expression {
      * @param {?=} typeParams
      * @param {?=} sourceSpan
      */
-    constructor(value, type = null, typeParams = null, sourceSpan) {
+    constructor(value, type, typeParams = null, sourceSpan) {
         super(type, sourceSpan);
         this.value = value;
         this.typeParams = typeParams;
@@ -36395,7 +36948,7 @@ class ConditionalExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(condition, trueCase, falseCase = null, type = null, sourceSpan) {
+    constructor(condition, trueCase, falseCase = null, type, sourceSpan) {
         super(type || trueCase.type, sourceSpan);
         this.condition = condition;
         this.falseCase = falseCase;
@@ -36431,7 +36984,7 @@ class NotExpr extends Expression {
 class CastExpr extends Expression {
     /**
      * @param {?} value
-     * @param {?} type
+     * @param {?=} type
      * @param {?=} sourceSpan
      */
     constructor(value, type, sourceSpan) {
@@ -36464,7 +37017,7 @@ class FunctionExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(params, statements, type = null, sourceSpan) {
+    constructor(params, statements, type, sourceSpan) {
         super(type, sourceSpan);
         this.params = params;
         this.statements = statements;
@@ -36494,7 +37047,7 @@ class BinaryOperatorExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(operator, lhs, rhs, type = null, sourceSpan) {
+    constructor(operator, lhs, rhs, type, sourceSpan) {
         super(type || lhs.type, sourceSpan);
         this.operator = operator;
         this.rhs = rhs;
@@ -36516,7 +37069,7 @@ class ReadPropExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(receiver, name, type = null, sourceSpan) {
+    constructor(receiver, name, type, sourceSpan) {
         super(type, sourceSpan);
         this.receiver = receiver;
         this.name = name;
@@ -36544,7 +37097,7 @@ class ReadKeyExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(receiver, index, type = null, sourceSpan) {
+    constructor(receiver, index, type, sourceSpan) {
         super(type, sourceSpan);
         this.receiver = receiver;
         this.index = index;
@@ -36571,7 +37124,7 @@ class LiteralArrayExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(entries, type = null, sourceSpan) {
+    constructor(entries, type, sourceSpan) {
         super(type, sourceSpan);
         this.entries = entries;
     }
@@ -36602,7 +37155,7 @@ class LiteralMapExpr extends Expression {
      * @param {?=} type
      * @param {?=} sourceSpan
      */
-    constructor(entries, type = null, sourceSpan) {
+    constructor(entries, type, sourceSpan) {
         super(type, sourceSpan);
         this.entries = entries;
         this.valueType = null;
@@ -36637,12 +37190,12 @@ class CommaExpr extends Expression {
         return visitor.visitCommaExpr(this, context);
     }
 }
-const THIS_EXPR = new ReadVarExpr(BuiltinVar.This);
-const SUPER_EXPR = new ReadVarExpr(BuiltinVar.Super);
-const CATCH_ERROR_VAR = new ReadVarExpr(BuiltinVar.CatchError);
-const CATCH_STACK_VAR = new ReadVarExpr(BuiltinVar.CatchStack);
-const NULL_EXPR = new LiteralExpr(null, null);
-const TYPED_NULL_EXPR = new LiteralExpr(null, INFERRED_TYPE);
+const THIS_EXPR = new ReadVarExpr(BuiltinVar.This, null, null);
+const SUPER_EXPR = new ReadVarExpr(BuiltinVar.Super, null, null);
+const CATCH_ERROR_VAR = new ReadVarExpr(BuiltinVar.CatchError, null, null);
+const CATCH_STACK_VAR = new ReadVarExpr(BuiltinVar.CatchStack, null, null);
+const NULL_EXPR = new LiteralExpr(null, null, null);
+const TYPED_NULL_EXPR = new LiteralExpr(null, INFERRED_TYPE, null);
 let StmtModifier = {};
 StmtModifier.Final = 0;
 StmtModifier.Private = 1;
@@ -36656,12 +37209,9 @@ class Statement {
      * @param {?=} modifiers
      * @param {?=} sourceSpan
      */
-    constructor(modifiers = null, sourceSpan) {
-        this.modifiers = modifiers;
-        this.sourceSpan = sourceSpan;
-        if (!modifiers) {
-            this.modifiers = [];
-        }
+    constructor(modifiers, sourceSpan) {
+        this.modifiers = modifiers || [];
+        this.sourceSpan = sourceSpan || null;
     }
     /**
      * @abstract
@@ -36674,7 +37224,7 @@ class Statement {
      * @param {?} modifier
      * @return {?}
      */
-    hasModifier(modifier) { return this.modifiers.indexOf(modifier) !== -1; }
+    hasModifier(modifier) { return ((this.modifiers)).indexOf(modifier) !== -1; }
 }
 class DeclareVarStmt extends Statement {
     /**
@@ -36684,7 +37234,7 @@ class DeclareVarStmt extends Statement {
      * @param {?=} modifiers
      * @param {?=} sourceSpan
      */
-    constructor(name, value, type = null, modifiers = null, sourceSpan) {
+    constructor(name, value, type, modifiers = null, sourceSpan) {
         super(modifiers, sourceSpan);
         this.name = name;
         this.value = value;
@@ -36708,12 +37258,12 @@ class DeclareFunctionStmt extends Statement {
      * @param {?=} modifiers
      * @param {?=} sourceSpan
      */
-    constructor(name, params, statements, type = null, modifiers = null, sourceSpan) {
+    constructor(name, params, statements, type, modifiers = null, sourceSpan) {
         super(modifiers, sourceSpan);
         this.name = name;
         this.params = params;
         this.statements = statements;
-        this.type = type;
+        this.type = type || null;
     }
     /**
      * @param {?} visitor
@@ -36762,21 +37312,21 @@ class ReturnStatement extends Statement {
 }
 class AbstractClassPart {
     /**
-     * @param {?=} type
-     * @param {?=} modifiers
+     * @param {?} type
+     * @param {?} modifiers
      */
-    constructor(type = null, modifiers) {
-        this.type = type;
+    constructor(type, modifiers) {
         this.modifiers = modifiers;
         if (!modifiers) {
             this.modifiers = [];
         }
+        this.type = type || null;
     }
     /**
      * @param {?} modifier
      * @return {?}
      */
-    hasModifier(modifier) { return this.modifiers.indexOf(modifier) !== -1; }
+    hasModifier(modifier) { return ((this.modifiers)).indexOf(modifier) !== -1; }
 }
 class ClassField extends AbstractClassPart {
     /**
@@ -36784,7 +37334,7 @@ class ClassField extends AbstractClassPart {
      * @param {?=} type
      * @param {?=} modifiers
      */
-    constructor(name, type = null, modifiers = null) {
+    constructor(name, type, modifiers = null) {
         super(type, modifiers);
         this.name = name;
     }
@@ -36797,7 +37347,7 @@ class ClassMethod extends AbstractClassPart {
      * @param {?=} type
      * @param {?=} modifiers
      */
-    constructor(name, params, body, type = null, modifiers = null) {
+    constructor(name, params, body, type, modifiers = null) {
         super(type, modifiers);
         this.name = name;
         this.params = params;
@@ -36811,7 +37361,7 @@ class ClassGetter extends AbstractClassPart {
      * @param {?=} type
      * @param {?=} modifiers
      */
-    constructor(name, body, type = null, modifiers = null) {
+    constructor(name, body, type, modifiers = null) {
         super(type, modifiers);
         this.name = name;
         this.body = body;
@@ -36957,7 +37507,7 @@ class AstTransformer$1 {
      */
     visitInvokeMethodExpr(ast, context) {
         const /** @type {?} */ method = ast.builtin || ast.name;
-        return this.transformExpr(new InvokeMethodExpr(ast.receiver.visitExpression(this, context), method, this.visitAllExpressions(ast.args, context), ast.type, ast.sourceSpan), context);
+        return this.transformExpr(new InvokeMethodExpr(ast.receiver.visitExpression(this, context), /** @type {?} */ ((method)), this.visitAllExpressions(ast.args, context), ast.type, ast.sourceSpan), context);
     }
     /**
      * @param {?} ast
@@ -36995,7 +37545,7 @@ class AstTransformer$1 {
      * @return {?}
      */
     visitConditionalExpr(ast, context) {
-        return this.transformExpr(new ConditionalExpr(ast.condition.visitExpression(this, context), ast.trueCase.visitExpression(this, context), ast.falseCase.visitExpression(this, context), ast.type, ast.sourceSpan), context);
+        return this.transformExpr(new ConditionalExpr(ast.condition.visitExpression(this, context), ast.trueCase.visitExpression(this, context), /** @type {?} */ ((ast.falseCase)).visitExpression(this, context), ast.type, ast.sourceSpan), context);
     }
     /**
      * @param {?} ast
@@ -37060,7 +37610,7 @@ class AstTransformer$1 {
      */
     visitLiteralMapExpr(ast, context) {
         const /** @type {?} */ entries = ast.entries.map((entry) => new LiteralMapEntry(entry.key, entry.value.visitExpression(this, context), entry.quoted));
-        const /** @type {?} */ mapType = new MapType(ast.valueType);
+        const /** @type {?} */ mapType = new MapType(ast.valueType, null);
         return this.transformExpr(new LiteralMapExpr(entries, mapType, ast.sourceSpan), context);
     }
     /**
@@ -37117,7 +37667,7 @@ class AstTransformer$1 {
      * @return {?}
      */
     visitDeclareClassStmt(stmt, context) {
-        const /** @type {?} */ parent = stmt.parent.visitExpression(this, context);
+        const /** @type {?} */ parent = ((stmt.parent)).visitExpression(this, context);
         const /** @type {?} */ getters = stmt.getters.map(getter => new ClassGetter(getter.name, this.visitAllStatements(getter.body, context), getter.type, getter.modifiers));
         const /** @type {?} */ ctorMethod = stmt.constructorMethod &&
             new ClassMethod(stmt.constructorMethod.name, stmt.constructorMethod.params, this.visitAllStatements(stmt.constructorMethod.body, context), stmt.constructorMethod.type, stmt.constructorMethod.modifiers);
@@ -37251,8 +37801,8 @@ class RecursiveAstVisitor$1 {
      */
     visitConditionalExpr(ast, context) {
         ast.condition.visitExpression(this, context);
-        ast.trueCase.visitExpression(this, context);
-        ast.falseCase.visitExpression(this, context);
+        ast.trueCase.visitExpression(this, context); /** @type {?} */
+        ((ast.falseCase)).visitExpression(this, context);
         return ast;
     }
     /**
@@ -37387,7 +37937,7 @@ class RecursiveAstVisitor$1 {
      * @return {?}
      */
     visitDeclareClassStmt(stmt, context) {
-        stmt.parent.visitExpression(this, context);
+        ((stmt.parent)).visitExpression(this, context);
         stmt.getters.forEach(getter => this.visitAllStatements(getter.body, context));
         if (stmt.constructorMethod) {
             this.visitAllStatements(stmt.constructorMethod.body, context);
@@ -37478,7 +38028,9 @@ class _ReadVarVisitor extends RecursiveAstVisitor$1 {
      * @return {?}
      */
     visitReadVarExpr(ast, context) {
-        this.varNames.add(ast.name);
+        if (ast.name) {
+            this.varNames.add(ast.name);
+        }
         return null;
     }
 }
@@ -37556,7 +38108,7 @@ class _ApplySourceSpanTransformer extends AstTransformer$1 {
  * @param {?=} sourceSpan
  * @return {?}
  */
-function variable(name, type = null, sourceSpan) {
+function variable(name, type, sourceSpan) {
     return new ReadVarExpr(name, type, sourceSpan);
 }
 /**
@@ -37575,7 +38127,7 @@ function importExpr(id, typeParams = null, sourceSpan) {
  * @return {?}
  */
 function importType(id, typeParams = null, typeModifiers = null) {
-    return id != null ? expressionType(importExpr(id, typeParams), typeModifiers) : null;
+    return id != null ? expressionType(importExpr(id, typeParams, null), typeModifiers) : null;
 }
 /**
  * @param {?} expr
@@ -37583,7 +38135,7 @@ function importType(id, typeParams = null, typeModifiers = null) {
  * @return {?}
  */
 function expressionType(expr, typeModifiers = null) {
-    return expr != null ? new ExpressionType(expr, typeModifiers) : null;
+    return expr != null ? ((new ExpressionType(expr, typeModifiers))) : null;
 }
 /**
  * @param {?} values
@@ -37591,7 +38143,7 @@ function expressionType(expr, typeModifiers = null) {
  * @param {?=} sourceSpan
  * @return {?}
  */
-function literalArr(values, type = null, sourceSpan) {
+function literalArr(values, type, sourceSpan) {
     return new LiteralArrayExpr(values, type, sourceSpan);
 }
 /**
@@ -37601,7 +38153,7 @@ function literalArr(values, type = null, sourceSpan) {
  * @return {?}
  */
 function literalMap(values, type = null, quoted = false) {
-    return new LiteralMapExpr(values.map(entry => new LiteralMapEntry(entry[0], entry[1], quoted)), type);
+    return new LiteralMapExpr(values.map(entry => new LiteralMapEntry(entry[0], entry[1], quoted)), type, null);
 }
 /**
  * @param {?} expr
@@ -37618,7 +38170,7 @@ function not(expr, sourceSpan) {
  * @param {?=} sourceSpan
  * @return {?}
  */
-function fn(params, body, type = null, sourceSpan) {
+function fn(params, body, type, sourceSpan) {
     return new FunctionExpr(params, body, type, sourceSpan);
 }
 /**
@@ -37627,7 +38179,7 @@ function fn(params, body, type = null, sourceSpan) {
  * @param {?=} sourceSpan
  * @return {?}
  */
-function literal(value, type = null, sourceSpan) {
+function literal(value, type, sourceSpan) {
     return new LiteralExpr(value, type, sourceSpan);
 }
 
@@ -37648,7 +38200,7 @@ function createClassStmt(config) {
     const /** @type {?} */ superCtorStmts = config.parent ? [SUPER_EXPR.callFn(parentArgs).toStmt()] : [];
     const /** @type {?} */ builder = concatClassBuilderParts(Array.isArray(config.builders) ? config.builders : [config.builders]);
     const /** @type {?} */ ctor = new ClassMethod(null, config.ctorParams || [], superCtorStmts.concat(builder.ctorStmts));
-    return new ClassStmt(config.name, config.parent, builder.fields, builder.getters, ctor, builder.methods, config.modifiers || [], config.sourceSpan);
+    return new ClassStmt(config.name, config.parent || null, builder.fields, builder.getters, ctor, builder.methods, config.modifiers || [], config.sourceSpan);
 }
 /**
  * @param {?} builders
@@ -37656,10 +38208,10 @@ function createClassStmt(config) {
  */
 function concatClassBuilderParts(builders) {
     return {
-        fields: [].concat(...builders.map(builder => builder.fields || [])),
-        methods: [].concat(...builders.map(builder => builder.methods || [])),
-        getters: [].concat(...builders.map(builder => builder.getters || [])),
-        ctorStmts: [].concat(...builders.map(builder => builder.ctorStmts || [])),
+        fields: [].concat(...((builders.map((builder => builder.fields || []))))),
+        methods: [].concat(...((builders.map(builder => builder.methods || [])))),
+        getters: [].concat(...((builders.map(builder => builder.getters || [])))),
+        ctorStmts: [].concat(...((builders.map(builder => builder.ctorStmts || [])))),
     };
 }
 
@@ -37777,7 +38329,7 @@ class NgModuleCompiler {
         const /** @type {?} */ ngModuleFactoryVar = `${identifierName(ngModuleMeta.type)}NgFactory`;
         const /** @type {?} */ ngModuleFactoryStmt = variable(ngModuleFactoryVar)
             .set(importExpr(createIdentifier(Identifiers.NgModuleFactory))
-            .instantiate([variable(injectorClass.name), importExpr(ngModuleMeta.type)], importType(createIdentifier(Identifiers.NgModuleFactory), [importType(ngModuleMeta.type)], [TypeModifier.Const])))
+            .instantiate([variable(injectorClass.name), importExpr(ngModuleMeta.type)], importType(createIdentifier(Identifiers.NgModuleFactory), [/** @type {?} */ ((importType(ngModuleMeta.type)))], [TypeModifier.Const])))
             .toDeclStmt(null, [StmtModifier.Final]);
         const /** @type {?} */ stmts = [injectorClass, ngModuleFactoryStmt];
         if (ngModuleMeta.id) {
@@ -37829,7 +38381,7 @@ class _InjectorBuilder {
         if (resolvedProvider.lifecycleHooks.indexOf(LifecycleHooks.OnDestroy) !== -1) {
             let /** @type {?} */ callNgOnDestroy = instance.callMethod('ngOnDestroy', []);
             if (!resolvedProvider.eager) {
-                callNgOnDestroy = this._lazyProps.get(instance.name).and(callNgOnDestroy);
+                callNgOnDestroy = ((this._lazyProps.get(instance.name))).and(callNgOnDestroy);
             }
             this._destroyStmts.push(callNgOnDestroy.toStmt());
         }
@@ -37841,14 +38393,14 @@ class _InjectorBuilder {
      */
     build() {
         const /** @type {?} */ getMethodStmts = this._tokens.map((token) => {
-            const /** @type {?} */ providerExpr = this._instances.get(tokenReference(token));
+            const /** @type {?} */ providerExpr = ((this._instances.get(tokenReference(token))));
             return new IfStmt(InjectMethodVars.token.identical(createDiTokenExpression(token)), [new ReturnStatement(providerExpr)]);
         });
         const /** @type {?} */ methods = [
-            new ClassMethod('createInternal', [], this._createStmts.concat(new ReturnStatement(this._instances.get(this._ngModuleMeta.type.reference))), importType(this._ngModuleMeta.type)),
+            new ClassMethod('createInternal', [], this._createStmts.concat(new ReturnStatement(/** @type {?} */ ((this._instances.get(this._ngModuleMeta.type.reference))))), importType(this._ngModuleMeta.type)),
             new ClassMethod('getInternal', [
-                new FnParam(InjectMethodVars.token.name, DYNAMIC_TYPE),
-                new FnParam(InjectMethodVars.notFoundResult.name, DYNAMIC_TYPE)
+                new FnParam(/** @type {?} */ ((InjectMethodVars.token.name)), DYNAMIC_TYPE),
+                new FnParam(/** @type {?} */ ((InjectMethodVars.notFoundResult.name)), DYNAMIC_TYPE)
             ], getMethodStmts.concat([new ReturnStatement(InjectMethodVars.notFoundResult)]), DYNAMIC_TYPE),
             new ClassMethod('destroyInternal', [], this._destroyStmts),
         ];
@@ -37861,7 +38413,7 @@ class _InjectorBuilder {
         return createClassStmt({
             name: injClassName,
             ctorParams: [new FnParam(InjectorProps.parent.name, importType(createIdentifier(Identifiers.Injector)))],
-            parent: importExpr(createIdentifier(Identifiers.NgModuleInjector), [importType(this._ngModuleMeta.type)]),
+            parent: importExpr(createIdentifier(Identifiers.NgModuleInjector), [/** @type {?} */ ((importType(this._ngModuleMeta.type)))]),
             parentArgs: parentArgs,
             builders: [{ methods }, this]
         });
@@ -37908,7 +38460,7 @@ class _InjectorBuilder {
         }
         else {
             resolvedProviderValueExpr = providerValueExpressions[0];
-            type = providerValueExpressions[0].type;
+            type = ((providerValueExpressions[0].type));
         }
         if (!type) {
             type = DYNAMIC_TYPE;
@@ -37935,7 +38487,7 @@ class _InjectorBuilder {
      * @return {?}
      */
     _getDependency(dep) {
-        let /** @type {?} */ result = null;
+        let /** @type {?} */ result = ((null));
         if (dep.isValue) {
             result = literal(dep.value);
         }
@@ -37949,11 +38501,11 @@ class _InjectorBuilder {
                 }
             }
             if (!result) {
-                result = this._instances.get(tokenReference(dep.token));
+                result = ((this._instances.get(tokenReference(/** @type {?} */ ((dep.token))))));
             }
         }
         if (!result) {
-            const /** @type {?} */ args = [createDiTokenExpression(dep.token)];
+            const /** @type {?} */ args = [createDiTokenExpression(/** @type {?} */ ((dep.token)))];
             if (dep.isOptional) {
                 args.push(NULL_EXPR);
             }
@@ -37971,7 +38523,7 @@ function createDiTokenExpression(token) {
         return literal(token.value);
     }
     else {
-        return importExpr(token.identifier);
+        return importExpr(/** @type {?} */ ((token.identifier)));
     }
 }
 class InjectorProps {
@@ -38084,14 +38636,14 @@ class SourceMapGenerator {
                 if (segment.sourceUrl != null) {
                     // zero-based index into the “sources” list
                     segAsStr +=
-                        toBase64VLQ(sourcesIndex.get(segment.sourceUrl) - lastSourceIndex);
-                    lastSourceIndex = sourcesIndex.get(segment.sourceUrl);
+                        toBase64VLQ(/** @type {?} */ ((sourcesIndex.get(segment.sourceUrl))) - lastSourceIndex);
+                    lastSourceIndex = ((sourcesIndex.get(segment.sourceUrl)));
                     // the zero-based starting line in the original source
-                    segAsStr += toBase64VLQ(segment.sourceLine0 - lastSourceLine0);
-                    lastSourceLine0 = segment.sourceLine0;
+                    segAsStr += toBase64VLQ(/** @type {?} */ ((segment.sourceLine0)) - lastSourceLine0);
+                    lastSourceLine0 = ((segment.sourceLine0));
                     // the zero-based starting column in the original source
-                    segAsStr += toBase64VLQ(segment.sourceCol0 - lastSourceCol0);
-                    lastSourceCol0 = segment.sourceCol0;
+                    segAsStr += toBase64VLQ(/** @type {?} */ ((segment.sourceCol0)) - lastSourceCol0);
+                    lastSourceCol0 = ((segment.sourceCol0));
                 }
                 return segAsStr;
             })
@@ -38173,8 +38725,8 @@ function toBase64Digit(value) {
 const _SINGLE_QUOTE_ESCAPE_STRING_RE = /'|\\|\n|\r|\$/g;
 const _LEGAL_IDENTIFIER_RE = /^[$A-Z_][0-9A-Z_$]*$/i;
 const _INDENT_WITH = '  ';
-const CATCH_ERROR_VAR$1 = variable('error');
-const CATCH_STACK_VAR$1 = variable('stack');
+const CATCH_ERROR_VAR$1 = variable('error', null, null);
+const CATCH_STACK_VAR$1 = variable('stack', null, null);
 /**
  * @abstract
  */
@@ -38222,7 +38774,7 @@ class EmitterVisitorContext {
      * @return {?}
      */
     println(from, lastPart = '') {
-        this.print(from, lastPart, true);
+        this.print(from || null, lastPart, true);
     }
     /**
      * @return {?}
@@ -38273,7 +38825,7 @@ class EmitterVisitorContext {
     /**
      * @return {?}
      */
-    popClass() { return this._classes.pop(); }
+    popClass() { return ((this._classes.pop())); }
     /**
      * @return {?}
      */
@@ -38328,7 +38880,7 @@ class EmitterVisitorContext {
                 mapFirstOffsetIfNeeded();
             }
             while (spanIdx < spans.length) {
-                const /** @type {?} */ span = spans[spanIdx];
+                const /** @type {?} */ span = ((spans[spanIdx]));
                 const /** @type {?} */ source = span.start.file;
                 const /** @type {?} */ sourceLine = span.start.line;
                 const /** @type {?} */ sourceCol = span.start.col;
@@ -38565,7 +39117,7 @@ class AbstractEmitterVisitor {
      * @return {?}
      */
     visitReadVarExpr(ast, ctx) {
-        let /** @type {?} */ varName = ast.name;
+        let /** @type {?} */ varName = ((ast.name));
         if (ast.builtin != null) {
             switch (ast.builtin) {
                 case BuiltinVar.Super:
@@ -38575,10 +39127,10 @@ class AbstractEmitterVisitor {
                     varName = 'this';
                     break;
                 case BuiltinVar.CatchError:
-                    varName = CATCH_ERROR_VAR$1.name;
+                    varName = ((CATCH_ERROR_VAR$1.name));
                     break;
                 case BuiltinVar.CatchStack:
-                    varName = CATCH_STACK_VAR$1.name;
+                    varName = ((CATCH_STACK_VAR$1.name));
                     break;
                 default:
                     throw new Error(`Unknown builtin variable ${ast.builtin}`);
@@ -38632,8 +39184,8 @@ class AbstractEmitterVisitor {
         ast.condition.visitExpression(this, ctx);
         ctx.print(ast, '? ');
         ast.trueCase.visitExpression(this, ctx);
-        ctx.print(ast, ': ');
-        ast.falseCase.visitExpression(this, ctx);
+        ctx.print(ast, ': '); /** @type {?} */
+        ((ast.falseCase)).visitExpression(this, ctx);
         ctx.print(ast, `)`);
         return null;
     }
@@ -38932,7 +39484,7 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor {
      * @return {?}
      */
     visitType(t, ctx, defaultType = 'any') {
-        if (t != null) {
+        if (t) {
             this.typeExpression++;
             t.visitType(this, ctx);
             this.typeExpression--;
@@ -38987,7 +39539,7 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor {
         if (ctx.isExportedVar(stmt.name) && stmt.value instanceof ExternalExpr && !stmt.type) {
             // check for a reexport
             const { name, filePath, members } = this._resolveStaticSymbol(stmt.value.value);
-            if (members.length === 0 && filePath !== this._genFilePath) {
+            if (((members)).length === 0 && filePath !== this._genFilePath) {
                 let /** @type {?} */ reexports = this.reexports.get(filePath);
                 if (!reexports) {
                     reexports = [];
@@ -39019,8 +39571,8 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor {
      * @return {?}
      */
     visitCastExpr(ast, ctx) {
-        ctx.print(ast, `(<`);
-        ast.type.visitType(this, ctx);
+        ctx.print(ast, `(<`); /** @type {?} */
+        ((ast.type)).visitType(this, ctx);
         ctx.print(ast, `>`);
         ast.value.visitExpression(this, ctx);
         ctx.print(ast, `)`);
@@ -39184,7 +39736,7 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor {
         ctx.decIndent();
         ctx.println(stmt, `} catch (${CATCH_ERROR_VAR$1.name}) {`);
         ctx.incIndent();
-        const /** @type {?} */ catchStmts = [/** @type {?} */ (CATCH_STACK_VAR$1.set(CATCH_ERROR_VAR$1.prop('stack')).toDeclStmt(null, [
+        const /** @type {?} */ catchStmts = [/** @type {?} */ (CATCH_STACK_VAR$1.set(CATCH_ERROR_VAR$1.prop('stack', null)).toDeclStmt(null, [
                 StmtModifier.Final
             ]))].concat(stmt.catchStmts);
         this.visitAllStatements(catchStmts, ctx);
@@ -39319,10 +39871,10 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor {
             }
             ctx.print(null, `${prefix}.`);
         }
-        if (members.length) {
+        if (((members)).length) {
             ctx.print(null, name);
             ctx.print(null, '.');
-            ctx.print(null, members.join('.'));
+            ctx.print(null, /** @type {?} */ ((members)).join('.'));
         }
         else {
             ctx.print(null, name);
@@ -39338,7 +39890,7 @@ class _TsEmitterVisitor extends AbstractEmitterVisitor {
             if (suppliedParameters > 0 || additionalParameters > 0) {
                 ctx.print(null, `<`);
                 if (suppliedParameters > 0) {
-                    this.visitAllObjects(type => type.visitType(this, ctx), typeParams, ctx, ',');
+                    this.visitAllObjects(type => type.visitType(this, ctx), /** @type {?} */ ((typeParams)), ctx, ',');
                 }
                 if (additionalParameters > 0) {
                     for (let /** @type {?} */ i = 0; i < additionalParameters; i++) {
@@ -39699,7 +40251,7 @@ class DomElementSchemaRegistry extends ElementSchemaRegistry {
             return true;
         }
         if (tagName.indexOf('-') > -1) {
-            if (tagName === 'ng-container' || tagName === 'ng-content') {
+            if (isNgContainer(tagName) || isNgContent(tagName)) {
                 return false;
             }
             if (schemaMetas.some((schema) => schema.name === CUSTOM_ELEMENTS_SCHEMA.name)) {
@@ -39721,7 +40273,7 @@ class DomElementSchemaRegistry extends ElementSchemaRegistry {
             return true;
         }
         if (tagName.indexOf('-') > -1) {
-            if (tagName === 'ng-container' || tagName === 'ng-content') {
+            if (isNgContainer(tagName) || isNgContent(tagName)) {
                 return true;
             }
             if (schemaMetas.some((schema) => schema.name === CUSTOM_ELEMENTS_SCHEMA.name)) {
@@ -39820,7 +40372,7 @@ class DomElementSchemaRegistry extends ElementSchemaRegistry {
     normalizeAnimationStyleValue(camelCaseProp, userProvidedProp, val) {
         let /** @type {?} */ unit = '';
         const /** @type {?} */ strVal = val.toString().trim();
-        let /** @type {?} */ errorMsg = null;
+        let /** @type {?} */ errorMsg = ((null));
         if (_isPixelDimensionStyle(camelCaseProp) && val !== 0 && val !== '0') {
             if (typeof val === 'number') {
                 unit = 'px';
@@ -40411,13 +40963,14 @@ class StyleCompiler {
      * @return {?}
      */
     compileComponent(comp) {
+        const /** @type {?} */ template = ((comp.template));
         const /** @type {?} */ externalStylesheets = [];
         const /** @type {?} */ componentStylesheet = this._compileStyles(comp, new CompileStylesheetMetadata({
-            styles: comp.template.styles,
-            styleUrls: comp.template.styleUrls,
+            styles: template.styles,
+            styleUrls: template.styleUrls,
             moduleUrl: identifierModuleUrl(comp.type)
         }), true);
-        comp.template.externalStylesheets.forEach((stylesheetMeta) => {
+        template.externalStylesheets.forEach((stylesheetMeta) => {
             const /** @type {?} */ compiledStylesheet = this._compileStyles(comp, stylesheetMeta, false);
             externalStylesheets.push(compiledStylesheet);
         });
@@ -40430,7 +40983,7 @@ class StyleCompiler {
      * @return {?}
      */
     _compileStyles(comp, stylesheet, isComponentStylesheet) {
-        const /** @type {?} */ shim = comp.template.encapsulation === ViewEncapsulation.Emulated;
+        const /** @type {?} */ shim = ((comp.template)).encapsulation === ViewEncapsulation.Emulated;
         const /** @type {?} */ styleExpressions = stylesheet.styles.map(plainStyle => literal(this._shimIfNeeded(plainStyle, shim)));
         const /** @type {?} */ dependencies = [];
         for (let /** @type {?} */ i = 0; i < stylesheet.styleUrls.length; i++) {
@@ -40527,7 +41080,7 @@ function convertActionBinding(localResolver, implicitReceiver, action, bindingId
     flattenStatements(actionWithoutBuiltins.visit(visitor, _Mode.Statement), actionStmts);
     prependTemporaryDecls(visitor.temporaryCount, bindingId, actionStmts);
     const /** @type {?} */ lastIndex = actionStmts.length - 1;
-    let /** @type {?} */ preventDefaultVar = null;
+    let /** @type {?} */ preventDefaultVar = ((null));
     if (lastIndex >= 0) {
         const /** @type {?} */ lastStatement = actionStmts[lastIndex];
         const /** @type {?} */ returnExpr = convertStmtIntoExpression(lastStatement);
@@ -40807,7 +41360,7 @@ class _AstToIrVisitor {
             fnResult = ast.converter(convertedArgs);
         }
         else {
-            fnResult = this.visit(ast.target, _Mode.Expression).callFn(convertedArgs);
+            fnResult = this.visit(/** @type {?} */ ((ast.target)), _Mode.Expression).callFn(convertedArgs);
         }
         return convertToStatementIfNeeded(mode, fnResult);
     }
@@ -40992,7 +41545,8 @@ class _AstToIrVisitor {
      * @return {?}
      */
     visitQuote(ast, mode) {
-        throw new Error('Quotes are not supported for evaluation!');
+        throw new Error(`Quotes are not supported for evaluation!
+        Statement: ${ast.uninterpretedExpression} located at ${ast.location}`);
     }
     /**
      * @param {?} ast
@@ -41048,7 +41602,7 @@ class _AstToIrVisitor {
         // Notice that the first guard condition is the left hand of the left most safe access node
         // which comes in as leftMostSafe to this routine.
         let /** @type {?} */ guardedExpression = this.visit(leftMostSafe.receiver, _Mode.Expression);
-        let /** @type {?} */ temporary;
+        let /** @type {?} */ temporary = ((undefined));
         if (this.needsTemporary(leftMostSafe.receiver)) {
             // If the expression has method calls or pipes then we need to save the result into a
             // temporary variable to avoid calling stateful or impure code more than once.
@@ -41393,7 +41947,6 @@ class BuiltinFunctionCall extends FunctionCall {
 const CLASS_ATTR$1 = 'class';
 const STYLE_ATTR = 'style';
 const IMPLICIT_TEMPLATE_VAR = '\$implicit';
-const NG_CONTAINER_TAG = 'ng-container';
 class ViewCompileResult {
     /**
      * @param {?} statements
@@ -41426,18 +41979,19 @@ class ViewCompiler {
         let /** @type {?} */ embeddedViewCount = 0;
         const /** @type {?} */ staticQueryIds = findStaticQueryIds(template);
         const /** @type {?} */ statements = [];
-        let /** @type {?} */ renderComponentVarName;
+        let /** @type {?} */ renderComponentVarName = ((undefined));
         if (!component.isHost) {
+            const /** @type {?} */ template = ((component.template));
             const /** @type {?} */ customRenderData = [];
-            if (component.template.animations && component.template.animations.length) {
-                customRenderData.push(new LiteralMapEntry('animation', convertValueToOutputAst(component.template.animations), true));
+            if (template.animations && template.animations.length) {
+                customRenderData.push(new LiteralMapEntry('animation', convertValueToOutputAst(template.animations), true));
             }
             const /** @type {?} */ renderComponentVar = variable(rendererTypeName(component.type.reference));
-            renderComponentVarName = renderComponentVar.name;
+            renderComponentVarName = ((renderComponentVar.name));
             statements.push(renderComponentVar
                 .set(importExpr(createIdentifier(Identifiers.createRendererType2))
                 .callFn([new LiteralMapExpr([
-                    new LiteralMapEntry('encapsulation', literal(component.template.encapsulation)),
+                    new LiteralMapEntry('encapsulation', literal(template.encapsulation)),
                     new LiteralMapEntry('styles', styles),
                     new LiteralMapEntry('data', new LiteralMapExpr(customRenderData))
                 ])]))
@@ -41493,7 +42047,8 @@ class ViewBuilder {
         // TODO(tbosch): The old view compiler used to use an `any` type
         // for the context in any embedded view. We keep this behaivor for now
         // to be able to introduce the new view compiler without too many errors.
-        this.compType = this.embeddedViewIndex > 0 ? DYNAMIC_TYPE : importType(this.component.type);
+        this.compType =
+            this.embeddedViewIndex > 0 ? DYNAMIC_TYPE : importType(this.component.type);
     }
     /**
      * @return {?}
@@ -41558,7 +42113,7 @@ class ViewBuilder {
         if (!this.parent && this.component.changeDetection === ChangeDetectionStrategy.OnPush) {
             viewFlags |= 2 /* OnPush */;
         }
-        const /** @type {?} */ viewFactory = new DeclareFunctionStmt(this.viewName, [new FnParam(LOG_VAR.name)], [new ReturnStatement(importExpr(createIdentifier(Identifiers.viewDef)).callFn([
+        const /** @type {?} */ viewFactory = new DeclareFunctionStmt(this.viewName, [new FnParam(/** @type {?} */ ((LOG_VAR.name)))], [new ReturnStatement(importExpr(createIdentifier(Identifiers.viewDef)).callFn([
                 literal(viewFlags),
                 literalArr(nodeDefExprs),
                 updateDirectivesFn,
@@ -41575,12 +42130,12 @@ class ViewBuilder {
         let /** @type {?} */ updateFn;
         if (updateStmts.length > 0) {
             const /** @type {?} */ preStmts = [];
-            if (!this.component.isHost && findReadVarNames(updateStmts).has(COMP_VAR.name)) {
+            if (!this.component.isHost && findReadVarNames(updateStmts).has(/** @type {?} */ ((COMP_VAR.name)))) {
                 preStmts.push(COMP_VAR.set(VIEW_VAR.prop('component')).toDeclStmt(this.compType));
             }
             updateFn = fn([
-                new FnParam(CHECK_VAR.name, INFERRED_TYPE),
-                new FnParam(VIEW_VAR.name, INFERRED_TYPE)
+                new FnParam(/** @type {?} */ ((CHECK_VAR.name)), INFERRED_TYPE),
+                new FnParam(/** @type {?} */ ((VIEW_VAR.name)), INFERRED_TYPE)
             ], [...preStmts, ...updateStmts], INFERRED_TYPE);
         }
         else {
@@ -41626,7 +42181,7 @@ class ViewBuilder {
     visitBoundText(ast, context) {
         const /** @type {?} */ nodeIndex = this.nodes.length;
         // reserve the space in the nodeDefs array
-        this.nodes.push(null);
+        this.nodes.push(/** @type {?} */ ((null)));
         const /** @type {?} */ astWithSource = (ast.value);
         const /** @type {?} */ inter = (astWithSource.ast);
         const /** @type {?} */ updateRendererExpressions = inter.expressions.map((expr, bindingIndex) => this._preprocessUpdateExpression({ nodeIndex, bindingIndex, sourceSpan: ast.sourceSpan, context: COMP_VAR, value: expr }));
@@ -41648,7 +42203,7 @@ class ViewBuilder {
     visitEmbeddedTemplate(ast, context) {
         const /** @type {?} */ nodeIndex = this.nodes.length;
         // reserve the space in the nodeDefs array
-        this.nodes.push(null);
+        this.nodes.push(/** @type {?} */ ((null)));
         const { flags, queryMatchesExpr, hostEvents } = this._visitElementOrTemplate(nodeIndex, ast);
         const /** @type {?} */ childVisitor = this.viewBuilderFactory(this);
         this.children.push(childVisitor);
@@ -41679,12 +42234,9 @@ class ViewBuilder {
     visitElement(ast, context) {
         const /** @type {?} */ nodeIndex = this.nodes.length;
         // reserve the space in the nodeDefs array so we can add children
-        this.nodes.push(null);
-        let /** @type {?} */ elName = ast.name;
-        if (ast.name === NG_CONTAINER_TAG) {
-            // Using a null element name creates an anchor.
-            elName = null;
-        }
+        this.nodes.push(/** @type {?} */ ((null)));
+        // Using a null element name creates an anchor.
+        const /** @type {?} */ elName = isNgContainer(ast.name) ? null : ast.name;
         const { flags, usedEvents, queryMatchesExpr, hostBindings: dirHostBindings, hostEvents } = this._visitElementOrTemplate(nodeIndex, ast);
         let /** @type {?} */ inputDefs = [];
         let /** @type {?} */ updateRendererExpressions = [];
@@ -41694,7 +42246,7 @@ class ViewBuilder {
                 .map((inputAst) => ({
                 context: /** @type {?} */ (COMP_VAR),
                 inputAst,
-                dirAst: null,
+                dirAst: /** @type {?} */ (null),
             }))
                 .concat(dirHostBindings);
             if (hostBindings.length) {
@@ -41774,8 +42326,8 @@ class ViewBuilder {
             this._visitProvider(componentFactoryResolverProvider, ast.queryMatches);
         }
         ast.providers.forEach((providerAst, providerIndex) => {
-            let /** @type {?} */ dirAst;
-            let /** @type {?} */ dirIndex;
+            let /** @type {?} */ dirAst = ((undefined));
+            let /** @type {?} */ dirIndex = ((undefined));
             ast.directives.forEach((localDirAst, i) => {
                 if (localDirAst.directive.type.reference === tokenReference(providerAst.token)) {
                     dirAst = localDirAst;
@@ -41783,7 +42335,7 @@ class ViewBuilder {
                 }
             });
             if (dirAst) {
-                const { hostBindings: dirHostBindings, hostEvents: dirHostEvents } = this._visitDirective(providerAst, dirAst, dirIndex, nodeIndex, ast.references, ast.queryMatches, usedEvents, this.staticQueryIds.get(/** @type {?} */ (ast)));
+                const { hostBindings: dirHostBindings, hostEvents: dirHostEvents } = this._visitDirective(providerAst, dirAst, dirIndex, nodeIndex, ast.references, ast.queryMatches, usedEvents, /** @type {?} */ ((this.staticQueryIds.get(/** @type {?} */ (ast)))));
                 hostBindings.push(...dirHostBindings);
                 hostEvents.push(...dirHostEvents);
             }
@@ -41793,7 +42345,7 @@ class ViewBuilder {
         });
         let /** @type {?} */ queryMatchExprs = [];
         ast.queryMatches.forEach((match) => {
-            let /** @type {?} */ valueType;
+            let /** @type {?} */ valueType = ((undefined));
             if (tokenReference(match.value) === resolveIdentifier(Identifiers.ElementRef)) {
                 valueType = 0 /* ElementRef */;
             }
@@ -41808,7 +42360,7 @@ class ViewBuilder {
             }
         });
         ast.references.forEach((ref) => {
-            let /** @type {?} */ valueType;
+            let /** @type {?} */ valueType = ((undefined));
             if (!ref.value) {
                 valueType = 1 /* RenderElement */;
             }
@@ -41821,14 +42373,14 @@ class ViewBuilder {
             }
         });
         ast.outputs.forEach((outputAst) => {
-            hostEvents.push({ context: COMP_VAR, eventAst: outputAst, dirAst: null });
+            hostEvents.push({ context: COMP_VAR, eventAst: outputAst, dirAst: /** @type {?} */ ((null)) });
         });
         return {
             flags,
             usedEvents: Array.from(usedEvents.values()),
             queryMatchesExpr: queryMatchExprs.length ? literalArr(queryMatchExprs) : NULL_EXPR,
             hostBindings,
-            hostEvents
+            hostEvents: hostEvents
         };
     }
     /**
@@ -41845,7 +42397,7 @@ class ViewBuilder {
     _visitDirective(providerAst, dirAst, directiveIndex, elementNodeIndex, refs, queryMatches, usedEvents, queryIds) {
         const /** @type {?} */ nodeIndex = this.nodes.length;
         // reserve the space in the nodeDefs array so we can add children
-        this.nodes.push(null);
+        this.nodes.push(/** @type {?} */ ((null)));
         dirAst.directive.queries.forEach((query, queryIndex) => {
             const /** @type {?} */ queryId = dirAst.contentQueryStartId + queryIndex;
             const /** @type {?} */ flags = 33554432 /* TypeContentQuery */ | calcStaticDynamicQueryFlags(queryIds, queryId, query.first);
@@ -41938,7 +42490,7 @@ class ViewBuilder {
     _visitProvider(providerAst, queryMatches) {
         const /** @type {?} */ nodeIndex = this.nodes.length;
         // reserve the space in the nodeDefs array so we can add children
-        this.nodes.push(null);
+        this.nodes.push(/** @type {?} */ ((null)));
         const { flags, queryMatchExprs, providerExpr, depsExpr } = this._visitProviderOrDirective(providerAst, queryMatches);
         // providerDef(
         //   flags: NodeFlags, matchedQueries: [string, QueryValueType][], token:any,
@@ -42055,7 +42607,7 @@ class ViewBuilder {
      * @return {?}
      */
     createPipeConverter(expression, name, argCount) {
-        const /** @type {?} */ pipe = this.usedPipes.find((pipeSummary) => pipeSummary.name === name);
+        const /** @type {?} */ pipe = ((this.usedPipes.find((pipeSummary) => pipeSummary.name === name)));
         if (pipe.pure) {
             const /** @type {?} */ nodeIndex = this.nodes.length;
             // function purePipeDef(argCount: number): NodeDef;
@@ -42169,7 +42721,7 @@ class ViewBuilder {
                 const /** @type {?} */ bindingId = `${updateBindingCount++}`;
                 const /** @type {?} */ nameResolver = context === COMP_VAR ? self : null;
                 const { stmts, currValExpr } = convertPropertyBinding(nameResolver, context, value, bindingId);
-                updateStmts.push(...stmts.map(stmt => applySourceSpanToStatementIfNeeded(stmt, sourceSpan)));
+                updateStmts.push(...stmts.map((stmt) => applySourceSpanToStatementIfNeeded(stmt, sourceSpan)));
                 return applySourceSpanToExpressionIfNeeded(currValExpr, sourceSpan);
             });
             if (expressions.length || allowEmptyExprs) {
@@ -42201,13 +42753,13 @@ class ViewBuilder {
         let /** @type {?} */ handleEventFn;
         if (handleEventStmts.length > 0) {
             const /** @type {?} */ preStmts = [ALLOW_DEFAULT_VAR.set(literal(true)).toDeclStmt(BOOL_TYPE)];
-            if (!this.component.isHost && findReadVarNames(handleEventStmts).has(COMP_VAR.name)) {
+            if (!this.component.isHost && findReadVarNames(handleEventStmts).has(/** @type {?} */ ((COMP_VAR.name)))) {
                 preStmts.push(COMP_VAR.set(VIEW_VAR.prop('component')).toDeclStmt(this.compType));
             }
             handleEventFn = fn([
-                new FnParam(VIEW_VAR.name, INFERRED_TYPE),
-                new FnParam(EVENT_NAME_VAR.name, INFERRED_TYPE),
-                new FnParam(EventHandlerVars.event.name, INFERRED_TYPE)
+                new FnParam(/** @type {?} */ ((VIEW_VAR.name)), INFERRED_TYPE),
+                new FnParam(/** @type {?} */ ((EVENT_NAME_VAR.name)), INFERRED_TYPE),
+                new FnParam(/** @type {?} */ ((EventHandlerVars.event.name)), INFERRED_TYPE)
             ], [...preStmts, ...handleEventStmts, new ReturnStatement(ALLOW_DEFAULT_VAR)], INFERRED_TYPE);
         }
         else {
@@ -42319,9 +42871,9 @@ function singleProviderDef(providerType, providerMeta) {
     let /** @type {?} */ flags;
     let /** @type {?} */ deps;
     if (providerType === ProviderAstType.Directive || providerType === ProviderAstType.Component) {
-        providerExpr = importExpr(providerMeta.useClass);
+        providerExpr = importExpr(/** @type {?} */ ((providerMeta.useClass)));
         flags = 8192 /* TypeDirective */;
-        deps = providerMeta.deps || providerMeta.useClass.diDeps;
+        deps = providerMeta.deps || ((providerMeta.useClass)).diDeps;
     }
     else {
         if (providerMeta.useClass) {
@@ -42362,7 +42914,7 @@ function tokenExpr(tokenMeta) {
 function depDef(dep) {
     // Note: the following fields have already been normalized out by provider_analyzer:
     // - isAttribute, isSelf, isHost
-    const /** @type {?} */ expr = dep.isValue ? convertValueToOutputAst(dep.value) : tokenExpr(dep.token);
+    const /** @type {?} */ expr = dep.isValue ? convertValueToOutputAst(dep.value) : tokenExpr(/** @type {?} */ ((dep.token)));
     let /** @type {?} */ flags = 0;
     if (dep.isSkipSelf) {
         flags |= 1 /* SkipSelf */;
@@ -42385,7 +42937,7 @@ function needsAdditionalRootNode(astNodes) {
         return lastAstNode.hasViewContainer;
     }
     if (lastAstNode instanceof ElementAst) {
-        if (lastAstNode.name === NG_CONTAINER_TAG && lastAstNode.children.length) {
+        if (isNgContainer(lastAstNode.name) && lastAstNode.children.length) {
             return needsAdditionalRootNode(lastAstNode.children);
         }
         return lastAstNode.hasViewContainer;
@@ -42472,7 +43024,6 @@ function fixedAttrsDef(elementAst) {
             mapResult[name] = prevValue != null ? mergeAttributeValue(name, prevValue, value) : value;
         });
     });
-    const /** @type {?} */ mapEntries = [];
     // Note: We need to sort to get a defined output order
     // for tests and for caching generated artifacts...
     return literalArr(Object.keys(mapResult).sort().map((attrName) => literalArr([literal(attrName), literal(mapResult[attrName])])));
@@ -42524,11 +43075,11 @@ function findStaticQueryIds(nodes, result = new Map()) {
     nodes.forEach((node) => {
         const /** @type {?} */ staticQueryIds = new Set();
         const /** @type {?} */ dynamicQueryIds = new Set();
-        let /** @type {?} */ queryMatches;
+        let /** @type {?} */ queryMatches = ((undefined));
         if (node instanceof ElementAst) {
             findStaticQueryIds(node.children, result);
             node.children.forEach((child) => {
-                const /** @type {?} */ childData = result.get(child);
+                const /** @type {?} */ childData = ((result.get(child)));
                 childData.staticQueryIds.forEach(queryId => staticQueryIds.add(queryId));
                 childData.dynamicQueryIds.forEach(queryId => dynamicQueryIds.add(queryId));
             });
@@ -42537,7 +43088,7 @@ function findStaticQueryIds(nodes, result = new Map()) {
         else if (node instanceof EmbeddedTemplateAst) {
             findStaticQueryIds(node.children, result);
             node.children.forEach((child) => {
-                const /** @type {?} */ childData = result.get(child);
+                const /** @type {?} */ childData = ((result.get(child)));
                 childData.staticQueryIds.forEach(queryId => dynamicQueryIds.add(queryId));
                 childData.dynamicQueryIds.forEach(queryId => dynamicQueryIds.add(queryId));
             });
@@ -42706,7 +43257,7 @@ function createDynamicClass(_classStmt, _ctx, _visitor) {
     _classStmt.methods.forEach(function (method) {
         const /** @type {?} */ paramNames = method.params.map(param => param.name);
         // Note: use `function` instead of arrow function to capture `this`
-        propertyDescriptors[method.name] = {
+        propertyDescriptors[((method.name))] = {
             writable: false,
             configurable: false,
             value: function (...args) {
@@ -42754,7 +43305,7 @@ class StatementInterpreter {
                 currCtx.vars.set(expr.name, value);
                 return value;
             }
-            currCtx = currCtx.parent;
+            currCtx = ((currCtx.parent));
         }
         throw new Error(`Not declared variable ${expr.name}`);
     }
@@ -42764,7 +43315,7 @@ class StatementInterpreter {
      * @return {?}
      */
     visitReadVarExpr(ast, ctx) {
-        let /** @type {?} */ varName = ast.name;
+        let /** @type {?} */ varName = ((ast.name));
         if (ast.builtin != null) {
             switch (ast.builtin) {
                 case BuiltinVar.Super:
@@ -42786,7 +43337,7 @@ class StatementInterpreter {
             if (currCtx.vars.has(varName)) {
                 return currCtx.vars.get(varName);
             }
-            currCtx = currCtx.parent;
+            currCtx = ((currCtx.parent));
         }
         throw new Error(`Not declared variable ${varName}`);
     }
@@ -42838,7 +43389,7 @@ class StatementInterpreter {
             }
         }
         else {
-            result = receiver[expr.name].apply(receiver, args);
+            result = receiver[((expr.name))].apply(receiver, args);
         }
         return result;
     }
@@ -43261,7 +43812,7 @@ class AbstractJsEmitterVisitor extends AbstractEmitterVisitor {
     visitInvokeFunctionExpr(expr, ctx) {
         const /** @type {?} */ fnExpr = expr.fn;
         if (fnExpr instanceof ReadVarExpr && fnExpr.builtin === BuiltinVar.Super) {
-            ctx.currentClass.parent.visitExpression(this, ctx);
+            ((((ctx.currentClass)).parent)).visitExpression(this, ctx);
             ctx.print(expr, `.call(this`);
             if (expr.args.length > 0) {
                 ctx.print(expr, `, `);
@@ -43488,7 +44039,7 @@ class JitCompiler {
      * @return {?}
      */
     compileModuleSync(moduleType) {
-        return this._compileModuleAndComponents(moduleType, true).syncResult;
+        return ((this._compileModuleAndComponents(moduleType, true).syncResult));
     }
     /**
      * @template T
@@ -43496,7 +44047,7 @@ class JitCompiler {
      * @return {?}
      */
     compileModuleAsync(moduleType) {
-        return this._compileModuleAndComponents(moduleType, false).asyncResult;
+        return ((this._compileModuleAndComponents(moduleType, false).asyncResult));
     }
     /**
      * @template T
@@ -43504,7 +44055,7 @@ class JitCompiler {
      * @return {?}
      */
     compileModuleAndAllComponentsSync(moduleType) {
-        return this._compileModuleAndAllComponents(moduleType, true).syncResult;
+        return ((this._compileModuleAndAllComponents(moduleType, true).syncResult));
     }
     /**
      * @template T
@@ -43512,7 +44063,7 @@ class JitCompiler {
      * @return {?}
      */
     compileModuleAndAllComponentsAsync(moduleType) {
-        return this._compileModuleAndAllComponents(moduleType, false).asyncResult;
+        return ((this._compileModuleAndAllComponents(moduleType, false).asyncResult));
     }
     /**
      * @param {?} component
@@ -43524,7 +44075,7 @@ class JitCompiler {
         if (!template) {
             throw new Error(`The component ${stringify(component)} is not yet compiled!`);
         }
-        return template.compMeta.template.ngContentSelectors;
+        return ((template.compMeta.template)).ngContentSelectors;
     }
     /**
      * @template T
@@ -43572,7 +44123,7 @@ class JitCompiler {
      */
     _loadModules(mainModule, isSync) {
         const /** @type {?} */ loadingPromises = [];
-        const /** @type {?} */ ngModule = this._metadataResolver.getNgModuleMetadata(mainModule);
+        const /** @type {?} */ ngModule = ((this._metadataResolver.getNgModuleMetadata(mainModule)));
         // Note: the loadingPromise for a module only includes the loading of the exported directives
         // of imported modules.
         // However, for runtime compilation, we want to transitively compile all modules,
@@ -43588,9 +44139,9 @@ class JitCompiler {
      * @return {?}
      */
     _compileModule(moduleType) {
-        let /** @type {?} */ ngModuleFactory = this._compiledNgModuleCache.get(moduleType);
+        let /** @type {?} */ ngModuleFactory = ((this._compiledNgModuleCache.get(moduleType)));
         if (!ngModuleFactory) {
-            const /** @type {?} */ moduleMeta = this._metadataResolver.getNgModuleMetadata(moduleType);
+            const /** @type {?} */ moduleMeta = ((this._metadataResolver.getNgModuleMetadata(moduleType)));
             // Always provide a bound Compiler
             const /** @type {?} */ extraProviders = [this._metadataResolver.getProviderMetadata(new ProviderMeta(Compiler, { useFactory: () => new ModuleBoundCompiler(this, moduleMeta.type.reference) }))];
             const /** @type {?} */ compileResult = this._ngModuleCompiler.compile(moduleMeta, extraProviders);
@@ -43612,11 +44163,11 @@ class JitCompiler {
      * @return {?}
      */
     _compileComponents(mainModule, allComponentFactories) {
-        const /** @type {?} */ ngModule = this._metadataResolver.getNgModuleMetadata(mainModule);
+        const /** @type {?} */ ngModule = ((this._metadataResolver.getNgModuleMetadata(mainModule)));
         const /** @type {?} */ moduleByDirective = new Map();
         const /** @type {?} */ templates = new Set();
         ngModule.transitiveModule.modules.forEach((localModuleSummary) => {
-            const /** @type {?} */ localModuleMeta = this._metadataResolver.getNgModuleMetadata(localModuleSummary.reference);
+            const /** @type {?} */ localModuleMeta = ((this._metadataResolver.getNgModuleMetadata(localModuleSummary.reference)));
             localModuleMeta.declaredDirectives.forEach((dirIdentifier) => {
                 moduleByDirective.set(dirIdentifier.reference, localModuleMeta);
                 const /** @type {?} */ dirMeta = this._metadataResolver.getDirectiveMetadata(dirIdentifier.reference);
@@ -43631,18 +44182,18 @@ class JitCompiler {
             });
         });
         ngModule.transitiveModule.modules.forEach((localModuleSummary) => {
-            const /** @type {?} */ localModuleMeta = this._metadataResolver.getNgModuleMetadata(localModuleSummary.reference);
+            const /** @type {?} */ localModuleMeta = ((this._metadataResolver.getNgModuleMetadata(localModuleSummary.reference)));
             localModuleMeta.declaredDirectives.forEach((dirIdentifier) => {
                 const /** @type {?} */ dirMeta = this._metadataResolver.getDirectiveMetadata(dirIdentifier.reference);
                 if (dirMeta.isComponent) {
                     dirMeta.entryComponents.forEach((entryComponentType) => {
-                        const /** @type {?} */ moduleMeta = moduleByDirective.get(entryComponentType.componentType);
+                        const /** @type {?} */ moduleMeta = ((moduleByDirective.get(entryComponentType.componentType)));
                         templates.add(this._createCompiledHostTemplate(entryComponentType.componentType, moduleMeta));
                     });
                 }
             });
             localModuleMeta.entryComponents.forEach((entryComponentType) => {
-                const /** @type {?} */ moduleMeta = moduleByDirective.get(entryComponentType.componentType);
+                const /** @type {?} */ moduleMeta = ((moduleByDirective.get(entryComponentType.componentType)));
                 templates.add(this._createCompiledHostTemplate(entryComponentType.componentType, moduleMeta));
             });
         });
@@ -43717,11 +44268,11 @@ class JitCompiler {
         const /** @type {?} */ compMeta = template.compMeta;
         const /** @type {?} */ externalStylesheetsByModuleUrl = new Map();
         const /** @type {?} */ stylesCompileResult = this._styleCompiler.compileComponent(compMeta);
-        stylesCompileResult.externalStylesheets.forEach((r) => { externalStylesheetsByModuleUrl.set(r.meta.moduleUrl, r); });
+        stylesCompileResult.externalStylesheets.forEach((r) => { externalStylesheetsByModuleUrl.set(/** @type {?} */ ((r.meta.moduleUrl)), r); });
         this._resolveStylesCompileResult(stylesCompileResult.componentStylesheet, externalStylesheetsByModuleUrl);
         const /** @type {?} */ directives = template.directives.map(dir => this._metadataResolver.getDirectiveSummary(dir.reference));
         const /** @type {?} */ pipes = template.ngModule.transitiveModule.pipes.map(pipe => this._metadataResolver.getPipeSummary(pipe.reference));
-        const { template: parsedTemplate, pipes: usedPipes } = this._templateParser.parse(compMeta, compMeta.template.template, directives, pipes, template.ngModule.schemas, templateSourceUrl(template.ngModule.type, template.compMeta, template.compMeta.template));
+        const { template: parsedTemplate, pipes: usedPipes } = this._templateParser.parse(compMeta, /** @type {?} */ ((((compMeta.template)).template)), directives, pipes, template.ngModule.schemas, templateSourceUrl(template.ngModule.type, template.compMeta, /** @type {?} */ ((template.compMeta.template))));
         const /** @type {?} */ compileResult = this._viewCompiler.compileComponent(compMeta, parsedTemplate, variable(stylesCompileResult.componentStylesheet.stylesVar), usedPipes);
         const /** @type {?} */ statements = stylesCompileResult.componentStylesheet.statements.concat(compileResult.statements);
         let /** @type {?} */ viewClassAndRendererTypeVars = compMeta.isHost ?
@@ -43744,7 +44295,7 @@ class JitCompiler {
      */
     _resolveStylesCompileResult(result, externalStylesheetsByModuleUrl) {
         result.dependencies.forEach((dep, i) => {
-            const /** @type {?} */ nestedCompileResult = externalStylesheetsByModuleUrl.get(dep.moduleUrl);
+            const /** @type {?} */ nestedCompileResult = ((externalStylesheetsByModuleUrl.get(dep.moduleUrl)));
             const /** @type {?} */ nestedStylesArr = this._resolveAndEvalStylesCompileResult(nestedCompileResult, externalStylesheetsByModuleUrl);
             dep.valuePlaceholder.reference = nestedStylesArr;
         });
@@ -43794,7 +44345,7 @@ class CompiledTemplate {
         this.compMeta = compMeta;
         this.ngModule = ngModule;
         this.directives = directives;
-        this._viewClass = null;
+        this._viewClass = ((null));
         this.isCompiled = false;
     }
     /**
@@ -43914,6 +44465,17 @@ const _NO_RESOURCE_LOADER = {
 };
 const baseHtmlParser = new InjectionToken('HtmlParser');
 /**
+ * @param {?} parser
+ * @param {?} translations
+ * @param {?} format
+ * @param {?} config
+ * @param {?} console
+ * @return {?}
+ */
+function i18nHtmlParserFactory(parser, translations, format, config, console) {
+    return new I18NHtmlParser(parser, translations, format, /** @type {?} */ ((config.missingTranslation)), console);
+}
+/**
  * A set of providers that provide `JitCompiler` and its dependencies to use for
  * template compilation.
  */
@@ -43931,7 +44493,7 @@ const COMPILER_PROVIDERS = [
     },
     {
         provide: I18NHtmlParser,
-        useFactory: (parser, translations, format, config, console) => new I18NHtmlParser(parser, translations, format, config.missingTranslation, console),
+        useFactory: i18nHtmlParserFactory,
         deps: [
             baseHtmlParser,
             [new Optional(), new Inject(TRANSLATIONS)],
@@ -43997,8 +44559,7 @@ class JitCompilerFactory {
                     });
                 },
                 deps: []
-            },
-            opts.providers
+            }, /** @type {?} */ ((opts.providers))
         ]);
         return injector.get(Compiler);
     }
@@ -44036,7 +44597,7 @@ function _mergeOptions(optionsArr) {
     return {
         useJit: _lastDefined(optionsArr.map(options => options.useJit)),
         defaultEncapsulation: _lastDefined(optionsArr.map(options => options.defaultEncapsulation)),
-        providers: _mergeArrays(optionsArr.map(options => options.providers)),
+        providers: _mergeArrays(optionsArr.map(options => ((options.providers)))),
         missingTranslation: _lastDefined(optionsArr.map(options => options.missingTranslation)),
     };
 }
@@ -44064,7 +44625,7 @@ function _mergeArrays(parts) {
 }
 
 /**
- * @license Angular v4.0.1
+ * @license Angular v4.1.1
  * (c) 2010-2017 Google, Inc. https://angular.io/
  * License: MIT
  */
@@ -44157,7 +44718,7 @@ const INTERNAL_BROWSER_DYNAMIC_PLATFORM_PROVIDERS = [
 /**
  * @stable
  */
-const VERSION$3 = new Version('4.0.1');
+const VERSION$3 = new Version('4.1.1');
 
 /**
  * @stable
@@ -50616,12 +51177,17 @@ var zone = createCommonjsModule(function (module, exports) {
  * found in the LICENSE file at https://angular.io/license
  */
 var Zone$1 = (function (global) {
+    var performance = global['performance'];
+    function mark(name) {
+        performance && performance['mark'] && performance['mark'](name);
+    }
+    function performanceMeasure(name, label) {
+        performance && performance['measure'] && performance['measure'](name, label);
+    }
+    mark('Zone');
     if (global['Zone']) {
         throw new Error('Zone already loaded.');
     }
-    var NO_ZONE = { name: 'NO ZONE' };
-    var notScheduled = 'notScheduled', scheduling = 'scheduling', scheduled = 'scheduled', running = 'running', canceling = 'canceling', unknown = 'unknown';
-    var microTask = 'microTask', macroTask = 'macroTask', eventTask = 'eventTask';
     var Zone = (function () {
         function Zone(parent, zoneSpec) {
             this._properties = null;
@@ -50632,7 +51198,7 @@ var Zone$1 = (function (global) {
                 new ZoneDelegate(this, this._parent && this._parent._zoneDelegate, zoneSpec);
         }
         Zone.assertZonePatched = function () {
-            if (global.Promise !== ZoneAwarePromise) {
+            if (global['Promise'] !== patches['ZoneAwarePromise']) {
                 throw new Error('Zone.js has detected that ZoneAwarePromise `(window|global).Promise` ' +
                     'has been overwritten.\n' +
                     'Most likely cause is that a Promise polyfill has been loaded ' +
@@ -50667,6 +51233,17 @@ var Zone$1 = (function (global) {
             configurable: true
         });
         
+        Zone.__load_patch = function (name, fn) {
+            if (patches.hasOwnProperty(name)) {
+                throw Error('Already loaded patch: ' + name);
+            }
+            else if (!global['__Zone_disable_' + name]) {
+                var perfName = 'Zone:' + name;
+                mark(perfName);
+                patches[name] = fn(global, Zone, _api);
+                performanceMeasure(perfName, perfName);
+            }
+        };
         Object.defineProperty(Zone.prototype, "parent", {
             get: function () {
                 return this._parent;
@@ -50717,7 +51294,7 @@ var Zone$1 = (function (global) {
             if (applyThis === void 0) { applyThis = undefined; }
             if (applyArgs === void 0) { applyArgs = null; }
             if (source === void 0) { source = null; }
-            _currentZoneFrame = new ZoneFrame(_currentZoneFrame, this);
+            _currentZoneFrame = { parent: _currentZoneFrame, zone: this };
             try {
                 return this._zoneDelegate.invoke(this, callback, applyThis, applyArgs, source);
             }
@@ -50729,7 +51306,7 @@ var Zone$1 = (function (global) {
             if (applyThis === void 0) { applyThis = null; }
             if (applyArgs === void 0) { applyArgs = null; }
             if (source === void 0) { source = null; }
-            _currentZoneFrame = new ZoneFrame(_currentZoneFrame, this);
+            _currentZoneFrame = { parent: _currentZoneFrame, zone: this };
             try {
                 try {
                     return this._zoneDelegate.invoke(this, callback, applyThis, applyArgs, source);
@@ -50753,7 +51330,7 @@ var Zone$1 = (function (global) {
             task.runCount++;
             var previousTask = _currentTask;
             _currentTask = task;
-            _currentZoneFrame = new ZoneFrame(_currentZoneFrame, this);
+            _currentZoneFrame = { parent: _currentZoneFrame, zone: this };
             try {
                 if (task.type == macroTask && task.data && !task.data.isPeriodic) {
                     task.cancelFn = null;
@@ -51015,6 +51592,7 @@ var Zone$1 = (function (global) {
                     this._hasTaskZS.onHasTask(this._hasTaskDlgt, this._hasTaskCurrZone, targetZone, isEmpty);
             }
             catch (err) {
+                this.handleError(targetZone, err);
             }
         };
         ZoneDelegate.prototype._updateTaskCount = function (type, count) {
@@ -51031,7 +51609,6 @@ var Zone$1 = (function (global) {
                     eventTask: counts.eventTask > 0,
                     change: type
                 };
-                // TODO(misko): what should happen if it throws?
                 this.hasTask(this.zone, isEmpty);
             }
         };
@@ -51109,7 +51686,6 @@ var Zone$1 = (function (global) {
                 type: this.type,
                 state: this.state,
                 source: this.source,
-                data: this.data,
                 zone: this.zone.name,
                 invoke: this.invoke,
                 scheduleFn: this.scheduleFn,
@@ -51120,27 +51696,17 @@ var Zone$1 = (function (global) {
         };
         return ZoneTask;
     }());
-    var ZoneFrame = (function () {
-        function ZoneFrame(parent, zone) {
-            this.parent = parent;
-            this.zone = zone;
-        }
-        return ZoneFrame;
-    }());
-    function __symbol__(name) {
-        return '__zone_symbol__' + name;
-    }
-    
+    //////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
+    ///  MICROTASK QUEUE
+    //////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
     var symbolSetTimeout = __symbol__('setTimeout');
     var symbolPromise = __symbol__('Promise');
     var symbolThen = __symbol__('then');
-    var _currentZoneFrame = new ZoneFrame(null, new Zone(null, null));
-    var _currentTask = null;
     var _microTaskQueue = [];
     var _isDrainingMicrotaskQueue = false;
-    var _uncaughtPromiseErrors = [];
-    var _numberOfNestedTaskFrames = 0;
-    function scheduleQueueDrain() {
+    function scheduleMicroTask(task) {
         // if we are not running in any task, and there has not been anything scheduled
         // we must bootstrap the initial task creation by manually scheduling the drain
         if (_numberOfNestedTaskFrames === 0 && _microTaskQueue.length === 0) {
@@ -51152,31 +51718,7 @@ var Zone$1 = (function (global) {
                 global[symbolSetTimeout](drainMicroTaskQueue, 0);
             }
         }
-    }
-    function scheduleMicroTask(task) {
-        scheduleQueueDrain();
-        _microTaskQueue.push(task);
-    }
-    function consoleError(e) {
-        if (Zone[__symbol__('ignoreConsoleErrorUncaughtError')]) {
-            return;
-        }
-        var rejection = e && e.rejection;
-        if (rejection) {
-            console.error('Unhandled Promise rejection:', rejection instanceof Error ? rejection.message : rejection, '; Zone:', e.zone.name, '; Task:', e.task && e.task.source, '; Value:', rejection, rejection instanceof Error ? rejection.stack : undefined);
-        }
-        console.error(e);
-    }
-    function handleUnhandledRejection(e) {
-        consoleError(e);
-        try {
-            var handler = Zone[__symbol__('unhandledPromiseRejectionHandler')];
-            if (handler && typeof handler === 'function') {
-                handler.apply(this, [e]);
-            }
-        }
-        catch (err) {
-        }
+        task && _microTaskQueue.push(task);
     }
     function drainMicroTaskQueue() {
         if (!_isDrainingMicrotaskQueue) {
@@ -51190,27 +51732,91 @@ var Zone$1 = (function (global) {
                         task.zone.runTask(task, null, null);
                     }
                     catch (error) {
-                        consoleError(error);
+                        _api.onUnhandledError(error);
                     }
                 }
             }
-            while (_uncaughtPromiseErrors.length) {
-                var _loop_1 = function () {
-                    var uncaughtPromiseError = _uncaughtPromiseErrors.shift();
-                    try {
-                        uncaughtPromiseError.zone.runGuarded(function () {
-                            throw uncaughtPromiseError;
-                        });
-                    }
-                    catch (error) {
-                        handleUnhandledRejection(error);
-                    }
-                };
-                while (_uncaughtPromiseErrors.length) {
-                    _loop_1();
-                }
-            }
+            var showError = !Zone[__symbol__('ignoreConsoleErrorUncaughtError')];
+            _api.microtaskDrainDone();
             _isDrainingMicrotaskQueue = false;
+        }
+    }
+    //////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
+    ///  BOOTSTRAP
+    //////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////
+    var NO_ZONE = { name: 'NO ZONE' };
+    var notScheduled = 'notScheduled', scheduling = 'scheduling', scheduled = 'scheduled', running = 'running', canceling = 'canceling', unknown = 'unknown';
+    var microTask = 'microTask', macroTask = 'macroTask', eventTask = 'eventTask';
+    var patches = {};
+    var _api = {
+        symbol: __symbol__,
+        currentZoneFrame: function () { return _currentZoneFrame; },
+        onUnhandledError: noop,
+        microtaskDrainDone: noop,
+        scheduleMicroTask: scheduleMicroTask,
+        showUncaughtError: function () { return !Zone[__symbol__('ignoreConsoleErrorUncaughtError')]; }
+    };
+    var _currentZoneFrame = { parent: null, zone: new Zone(null, null) };
+    var _currentTask = null;
+    var _numberOfNestedTaskFrames = 0;
+    function noop() { }
+    function __symbol__(name) {
+        return '__zone_symbol__' + name;
+    }
+    performanceMeasure('Zone', 'Zone');
+    return global['Zone'] = Zone;
+})(typeof window !== 'undefined' && window || typeof self !== 'undefined' && self || commonjsGlobal);
+
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
+Zone.__load_patch('ZoneAwarePromise', function (global, Zone, api) {
+    var __symbol__ = api.symbol;
+    var _uncaughtPromiseErrors = [];
+    var symbolPromise = __symbol__('Promise');
+    var symbolThen = __symbol__('then');
+    api.onUnhandledError = function (e) {
+        if (api.showUncaughtError()) {
+            var rejection = e && e.rejection;
+            if (rejection) {
+                console.error('Unhandled Promise rejection:', rejection instanceof Error ? rejection.message : rejection, '; Zone:', e.zone.name, '; Task:', e.task && e.task.source, '; Value:', rejection, rejection instanceof Error ? rejection.stack : undefined);
+            }
+            console.error(e);
+        }
+    };
+    api.microtaskDrainDone = function () {
+        while (_uncaughtPromiseErrors.length) {
+            var _loop_1 = function () {
+                var uncaughtPromiseError = _uncaughtPromiseErrors.shift();
+                try {
+                    uncaughtPromiseError.zone.runGuarded(function () {
+                        throw uncaughtPromiseError;
+                    });
+                }
+                catch (error) {
+                    handleUnhandledRejection(error);
+                }
+            };
+            while (_uncaughtPromiseErrors.length) {
+                _loop_1();
+            }
+        }
+    };
+    function handleUnhandledRejection(e) {
+        api.onUnhandledError(e);
+        try {
+            var handler = Zone[__symbol__('unhandledPromiseRejectionHandler')];
+            if (handler && typeof handler === 'function') {
+                handler.apply(this, [e]);
+            }
+        }
+        catch (err) {
         }
     }
     function isThenable(value) {
@@ -51316,7 +51922,7 @@ var Zone$1 = (function (global) {
                         error_1.zone = Zone.current;
                         error_1.task = Zone.currentTask;
                         _uncaughtPromiseErrors.push(error_1);
-                        scheduleQueueDrain();
+                        api.scheduleMicroTask(); // to make sure that it is running
                     }
                 }
             }
@@ -51479,9 +52085,9 @@ var Zone$1 = (function (global) {
             if (resultPromise instanceof ZoneAwarePromise) {
                 return resultPromise;
             }
-            var Ctor = resultPromise.constructor;
-            if (!Ctor[symbolThenPatched]) {
-                patchThen(Ctor);
+            var ctor = resultPromise.constructor;
+            if (!ctor[symbolThenPatched]) {
+                patchThen(ctor);
             }
             return resultPromise;
         };
@@ -51493,235 +52099,10 @@ var Zone$1 = (function (global) {
             global['fetch'] = zoneify(fetch_1);
         }
     }
-    // This is not part of public API, but it is usefull for tests, so we expose it.
+    // This is not part of public API, but it is useful for tests, so we expose it.
     Promise[Zone.__symbol__('uncaughtPromiseErrors')] = _uncaughtPromiseErrors;
-    var blacklistedStackFramesSymbol = Zone.__symbol__('blacklistedStackFrames');
-    var NativeError = global[__symbol__('Error')] = global.Error;
-    // Store the frames which should be removed from the stack frames
-    var blackListedStackFrames = {};
-    // We must find the frame where Error was created, otherwise we assume we don't understand stack
-    var zoneAwareFrame1;
-    var zoneAwareFrame2;
-    global.Error = ZoneAwareError;
-    var stackRewrite = 'stackRewrite';
-    /**
-     * This is ZoneAwareError which processes the stack frame and cleans up extra frames as well as
-     * adds zone information to it.
-     */
-    function ZoneAwareError() {
-        var _this = this;
-        // We always have to return native error otherwise the browser console will not work.
-        var error = NativeError.apply(this, arguments);
-        if (!error.stack) {
-            // in IE, the error.stack will be undefined
-            // when error was constructed, it will only
-            // be available when throw
-            try {
-                throw error;
-            }
-            catch (err) {
-                error = err;
-            }
-        }
-        // Save original stack trace
-        var originalStack = error['originalStack'] = error.stack;
-        // Process the stack trace and rewrite the frames.
-        if (ZoneAwareError[stackRewrite] && originalStack) {
-            var frames_1 = originalStack.split('\n');
-            var zoneFrame = _currentZoneFrame;
-            var i = 0;
-            // Find the first frame
-            while (!(frames_1[i] === zoneAwareFrame1 || frames_1[i] === zoneAwareFrame2) &&
-                i < frames_1.length) {
-                i++;
-            }
-            for (; i < frames_1.length && zoneFrame; i++) {
-                var frame = frames_1[i];
-                if (frame.trim()) {
-                    switch (blackListedStackFrames[frame]) {
-                        case 0 /* blackList */:
-                            frames_1.splice(i, 1);
-                            i--;
-                            break;
-                        case 1 /* transition */:
-                            if (zoneFrame.parent) {
-                                // This is the special frame where zone changed. Print and process it accordingly
-                                frames_1[i] += " [" + zoneFrame.parent.zone.name + " => " + zoneFrame.zone.name + "]";
-                                zoneFrame = zoneFrame.parent;
-                            }
-                            else {
-                                zoneFrame = null;
-                            }
-                            break;
-                        default:
-                            frames_1[i] += " [" + zoneFrame.zone.name + "]";
-                    }
-                }
-            }
-            try {
-                error.stack = error.zoneAwareStack = frames_1.join('\n');
-            }
-            catch (e) {
-                // ignore as some browsers don't allow overriding of stack
-            }
-        }
-        if (this instanceof NativeError && this.constructor != NativeError) {
-            // We got called with a `new` operator AND we are subclass of ZoneAwareError
-            // in that case we have to copy all of our properties to `this`.
-            Object.keys(error).concat('stack', 'message').forEach(function (key) {
-                if (error[key] !== undefined) {
-                    try {
-                        _this[key] = error[key];
-                    }
-                    catch (e) {
-                        // ignore the assignment in case it is a setter and it throws.
-                    }
-                }
-            });
-            return this;
-        }
-        return error;
-    }
-    // Copy the prototype so that instanceof operator works as expected
-    ZoneAwareError.prototype = NativeError.prototype;
-    ZoneAwareError[blacklistedStackFramesSymbol] = blackListedStackFrames;
-    ZoneAwareError[stackRewrite] = false;
-    // those properties need special handling
-    var specialPropertyNames = ['stackTraceLimit', 'captureStackTrace', 'prepareStackTrace'];
-    // those properties of NativeError should be set to ZoneAwareError
-    var nativeErrorProperties = Object.keys(NativeError);
-    if (nativeErrorProperties) {
-        nativeErrorProperties.forEach(function (prop) {
-            if (specialPropertyNames.filter(function (sp) { return sp === prop; }).length === 0) {
-                Object.defineProperty(ZoneAwareError, prop, {
-                    get: function () {
-                        return NativeError[prop];
-                    },
-                    set: function (value) {
-                        NativeError[prop] = value;
-                    }
-                });
-            }
-        });
-    }
-    if (NativeError.hasOwnProperty('stackTraceLimit')) {
-        // Extend default stack limit as we will be removing few frames.
-        NativeError.stackTraceLimit = Math.max(NativeError.stackTraceLimit, 15);
-        // make sure that ZoneAwareError has the same property which forwards to NativeError.
-        Object.defineProperty(ZoneAwareError, 'stackTraceLimit', {
-            get: function () {
-                return NativeError.stackTraceLimit;
-            },
-            set: function (value) {
-                return NativeError.stackTraceLimit = value;
-            }
-        });
-    }
-    if (NativeError.hasOwnProperty('captureStackTrace')) {
-        Object.defineProperty(ZoneAwareError, 'captureStackTrace', {
-            // add named function here because we need to remove this
-            // stack frame when prepareStackTrace below
-            value: function zoneCaptureStackTrace(targetObject, constructorOpt) {
-                NativeError.captureStackTrace(targetObject, constructorOpt);
-            }
-        });
-    }
-    Object.defineProperty(ZoneAwareError, 'prepareStackTrace', {
-        get: function () {
-            return NativeError.prepareStackTrace;
-        },
-        set: function (value) {
-            if (!value || typeof value !== 'function') {
-                return NativeError.prepareStackTrace = value;
-            }
-            return NativeError.prepareStackTrace = function (error, structuredStackTrace) {
-                // remove additional stack information from ZoneAwareError.captureStackTrace
-                if (structuredStackTrace) {
-                    for (var i = 0; i < structuredStackTrace.length; i++) {
-                        var st = structuredStackTrace[i];
-                        // remove the first function which name is zoneCaptureStackTrace
-                        if (st.getFunctionName() === 'zoneCaptureStackTrace') {
-                            structuredStackTrace.splice(i, 1);
-                            break;
-                        }
-                    }
-                }
-                return value.apply(this, [error, structuredStackTrace]);
-            };
-        }
-    });
-    // Now we need to populate the `blacklistedStackFrames` as well as find the
-    // run/runGuraded/runTask frames. This is done by creating a detect zone and then threading
-    // the execution through all of the above methods so that we can look at the stack trace and
-    // find the frames of interest.
-    var detectZone = Zone.current.fork({
-        name: 'detect',
-        onInvoke: function (parentZoneDelegate, currentZone, targetZone, delegate, applyThis, applyArgs, source) {
-            // Here only so that it will show up in the stack frame so that it can be black listed.
-            return parentZoneDelegate.invoke(targetZone, delegate, applyThis, applyArgs, source);
-        },
-        onHandleError: function (parentZD, current, target, error) {
-            if (error.originalStack && Error === ZoneAwareError) {
-                var frames_2 = error.originalStack.split(/\n/);
-                var runFrame = false, runGuardedFrame = false, runTaskFrame = false;
-                while (frames_2.length) {
-                    var frame = frames_2.shift();
-                    // On safari it is possible to have stack frame with no line number.
-                    // This check makes sure that we don't filter frames on name only (must have
-                    // linenumber)
-                    if (/:\d+:\d+/.test(frame)) {
-                        // Get rid of the path so that we don't accidentally find function name in path.
-                        // In chrome the separator is `(` and `@` in FF and safari
-                        // Chrome: at Zone.run (zone.js:100)
-                        // Chrome: at Zone.run (http://localhost:9876/base/build/lib/zone.js:100:24)
-                        // FireFox: Zone.prototype.run@http://localhost:9876/base/build/lib/zone.js:101:24
-                        // Safari: run@http://localhost:9876/base/build/lib/zone.js:101:24
-                        var fnName = frame.split('(')[0].split('@')[0];
-                        var frameType = 1;
-                        if (fnName.indexOf('ZoneAwareError') !== -1) {
-                            zoneAwareFrame1 = frame;
-                            zoneAwareFrame2 = frame.replace('Error.', '');
-                            blackListedStackFrames[zoneAwareFrame2] = 0 /* blackList */;
-                        }
-                        if (fnName.indexOf('runGuarded') !== -1) {
-                            runGuardedFrame = true;
-                        }
-                        else if (fnName.indexOf('runTask') !== -1) {
-                            runTaskFrame = true;
-                        }
-                        else if (fnName.indexOf('run') !== -1) {
-                            runFrame = true;
-                        }
-                        else {
-                            frameType = 0 /* blackList */;
-                        }
-                        blackListedStackFrames[frame] = frameType;
-                        // Once we find all of the frames we can stop looking.
-                        if (runFrame && runGuardedFrame && runTaskFrame) {
-                            ZoneAwareError[stackRewrite] = true;
-                            break;
-                        }
-                    }
-                }
-            }
-            return false;
-        }
-    });
-    // carefully constructor a stack frame which contains all of the frames of interest which
-    // need to be detected and blacklisted.
-    // carefully constructor a stack frame which contains all of the frames of interest which
-    // need to be detected and blacklisted.
-    var detectRunFn = function () {
-        detectZone.run(function () {
-            detectZone.runGuarded(function () {
-                throw new ZoneAwareError(ZoneAwareError, NativeError);
-            });
-        });
-    };
-    // Cause the error to extract the stack frames.
-    detectZone.runTask(detectZone.scheduleMacroTask('detect', detectRunFn, null, function () { return null; }, null));
-    return global['Zone'] = Zone;
-})(typeof window !== 'undefined' && window || typeof self !== 'undefined' && self || commonjsGlobal);
+    return ZoneAwarePromise;
+});
 
 /**
  * @license
@@ -51736,7 +52117,7 @@ var Zone$1 = (function (global) {
  * @suppress {undefinedVars,globalThis}
  */
 var zoneSymbol = function (n) { return "__zone_symbol__" + n; };
-var _global$1 = typeof window === 'object' && window || typeof self === 'object' && self || commonjsGlobal;
+var _global = typeof window === 'object' && window || typeof self === 'object' && self || commonjsGlobal;
 function bindArguments(args, source) {
     for (var i = args.length - 1; i >= 0; i--) {
         if (typeof args[i] === 'function') {
@@ -51752,9 +52133,11 @@ function patchPrototype(prototype, fnNames) {
         var delegate = prototype[name_1];
         if (delegate) {
             prototype[name_1] = (function (delegate) {
-                return function () {
+                var patched = function () {
                     return delegate.apply(this, bindArguments(arguments, source + '.' + name_1));
                 };
+                attachOriginToPatched(patched, delegate);
+                return patched;
             })(delegate);
         }
     };
@@ -51763,7 +52146,7 @@ function patchPrototype(prototype, fnNames) {
     }
 }
 var isWebWorker = (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope);
-var isNode = (!('nw' in _global$1) && typeof process !== 'undefined' &&
+var isNode = (!('nw' in _global) && typeof process !== 'undefined' &&
     {}.toString.call(process) === '[object process]');
 var isBrowser = !isNode && !isWebWorker && !!(typeof window !== 'undefined' && window['HTMLElement']);
 // we are in electron of nw, so we are both browser and nodejs
@@ -51772,9 +52155,10 @@ var isMix = typeof process !== 'undefined' &&
     !!(typeof window !== 'undefined' && window['HTMLElement']);
 function patchProperty(obj, prop) {
     var desc = Object.getOwnPropertyDescriptor(obj, prop) || { enumerable: true, configurable: true };
-    var originalDesc = Object.getOwnPropertyDescriptor(obj, 'original' + prop);
-    if (!originalDesc && desc.get) {
-        Object.defineProperty(obj, 'original' + prop, { enumerable: false, configurable: true, get: desc.get });
+    // if the descriptor is not configurable
+    // just return
+    if (!desc.configurable) {
+        return;
     }
     // A property descriptor cannot have getter/setter and be writable
     // deleting the writable and value properties avoids this error:
@@ -51783,77 +52167,109 @@ function patchProperty(obj, prop) {
     // getter or setter has been specified
     delete desc.writable;
     delete desc.value;
+    var originalDescGet = desc.get;
     // substr(2) cuz 'onclick' -> 'click', etc
     var eventName = prop.substr(2);
     var _prop = zoneSymbol('_' + prop);
-    desc.set = function (fn) {
-        if (this[_prop]) {
-            this.removeEventListener(eventName, this[_prop]);
+    desc.set = function (newValue) {
+        // in some of windows's onproperty callback, this is undefined
+        // so we need to check it
+        var target = this;
+        if (!target && obj === _global) {
+            target = _global;
         }
-        if (typeof fn === 'function') {
+        if (!target) {
+            return;
+        }
+        var previousValue = target[_prop];
+        if (previousValue) {
+            target.removeEventListener(eventName, previousValue);
+        }
+        if (typeof newValue === 'function') {
             var wrapFn = function (event) {
-                var result;
-                result = fn.apply(this, arguments);
+                var result = newValue.apply(this, arguments);
                 if (result != undefined && !result) {
                     event.preventDefault();
                 }
                 return result;
             };
-            this[_prop] = wrapFn;
-            this.addEventListener(eventName, wrapFn, false);
+            target[_prop] = wrapFn;
+            target.addEventListener(eventName, wrapFn, false);
         }
         else {
-            this[_prop] = null;
+            target[_prop] = null;
         }
     };
     // The getter would return undefined for unassigned properties but the default value of an
     // unassigned property is null
     desc.get = function () {
-        var r = this[_prop] || null;
-        // result will be null when use inline event attribute,
-        // such as <button onclick="func();">OK</button>
-        // because the onclick function is internal raw uncompiled handler
-        // the onclick will be evaluated when first time event was triggered or
-        // the property is accessed, https://github.com/angular/zone.js/issues/525
-        // so we should use original native get to retrieve the handler
-        if (r === null) {
-            if (originalDesc && originalDesc.get) {
-                r = originalDesc.get.apply(this, arguments);
-                if (r) {
-                    desc.set.apply(this, [r]);
-                    if (typeof this['removeAttribute'] === 'function') {
-                        this.removeAttribute(prop);
-                    }
+        // in some of windows's onproperty callback, this is undefined
+        // so we need to check it
+        var target = this;
+        if (!target && obj === _global) {
+            target = _global;
+        }
+        if (!target) {
+            return null;
+        }
+        if (target.hasOwnProperty(_prop)) {
+            return target[_prop];
+        }
+        else if (originalDescGet) {
+            // result will be null when use inline event attribute,
+            // such as <button onclick="func();">OK</button>
+            // because the onclick function is internal raw uncompiled handler
+            // the onclick will be evaluated when first time event was triggered or
+            // the property is accessed, https://github.com/angular/zone.js/issues/525
+            // so we should use original native get to retrieve the handler
+            var value = originalDescGet && originalDescGet.apply(this);
+            if (value) {
+                desc.set.apply(this, [value]);
+                if (typeof target['removeAttribute'] === 'function') {
+                    target.removeAttribute(prop);
                 }
+                return value;
             }
         }
-        return this[_prop] || null;
+        return null;
     };
     Object.defineProperty(obj, prop, desc);
 }
-
 function patchOnProperties(obj, properties) {
-    var onProperties = [];
-    for (var prop in obj) {
-        if (prop.substr(0, 2) == 'on') {
-            onProperties.push(prop);
-        }
-    }
-    for (var j = 0; j < onProperties.length; j++) {
-        patchProperty(obj, onProperties[j]);
-    }
     if (properties) {
         for (var i = 0; i < properties.length; i++) {
             patchProperty(obj, 'on' + properties[i]);
         }
     }
+    else {
+        var onProperties = [];
+        for (var prop in obj) {
+            if (prop.substr(0, 2) == 'on') {
+                onProperties.push(prop);
+            }
+        }
+        for (var j = 0; j < onProperties.length; j++) {
+            patchProperty(obj, onProperties[j]);
+        }
+    }
 }
-
 var EVENT_TASKS = zoneSymbol('eventTasks');
 // For EventTarget
 var ADD_EVENT_LISTENER = 'addEventListener';
 var REMOVE_EVENT_LISTENER = 'removeEventListener';
-function findExistingRegisteredTask(target, handler, name, capture, remove) {
+// compare the EventListenerOptionsOrCapture
+// 1. if the options is usCapture: boolean, compare the useCpature values directly
+// 2. if the options is EventListerOptions, only compare the capture
+function compareEventListenerOptions(left, right) {
+    var leftCapture = (typeof left === 'boolean') ?
+        left :
+        ((typeof left === 'object') ? (left && left.capture) : false);
+    var rightCapture = (typeof right === 'boolean') ?
+        right :
+        ((typeof right === 'object') ? (right && right.capture) : false);
+    return !!leftCapture === !!rightCapture;
+}
+function findExistingRegisteredTask(target, handler, name, options, remove) {
     var eventTasks = target[EVENT_TASKS];
     if (eventTasks) {
         for (var i = 0; i < eventTasks.length; i++) {
@@ -51861,7 +52277,7 @@ function findExistingRegisteredTask(target, handler, name, capture, remove) {
             var data = eventTask.data;
             var listener = data.handler;
             if ((data.handler === handler || listener.listener === handler) &&
-                data.useCapturing === capture && data.eventName === name) {
+                compareEventListenerOptions(data.options, options) && data.eventName === name) {
                 if (remove) {
                     eventTasks.splice(i, 1);
                 }
@@ -51885,25 +52301,54 @@ function attachRegisteredEvent(target, eventTask, isPrepend) {
 }
 var defaultListenerMetaCreator = function (self, args) {
     return {
-        useCapturing: args[2],
+        options: args[2],
         eventName: args[0],
         handler: args[1],
-        target: self || _global$1,
+        target: self || _global,
         name: args[0],
+        crossContext: false,
         invokeAddFunc: function (addFnSymbol, delegate) {
-            if (delegate && delegate.invoke) {
-                return this.target[addFnSymbol](this.eventName, delegate.invoke, this.useCapturing);
+            // check if the data is cross site context, if it is, fallback to
+            // remove the delegate directly and try catch error
+            if (!this.crossContext) {
+                if (delegate && delegate.invoke) {
+                    return this.target[addFnSymbol](this.eventName, delegate.invoke, this.options);
+                }
+                else {
+                    return this.target[addFnSymbol](this.eventName, delegate, this.options);
+                }
             }
             else {
-                return this.target[addFnSymbol](this.eventName, delegate, this.useCapturing);
+                // add a if/else branch here for performance concern, for most times
+                // cross site context is false, so we don't need to try/catch
+                try {
+                    return this.target[addFnSymbol](this.eventName, delegate, this.options);
+                }
+                catch (err) {
+                    // do nothing here is fine, because objects in a cross-site context are unusable
+                }
             }
         },
         invokeRemoveFunc: function (removeFnSymbol, delegate) {
-            if (delegate && delegate.invoke) {
-                return this.target[removeFnSymbol](this.eventName, delegate.invoke, this.useCapturing);
+            // check if the data is cross site context, if it is, fallback to
+            // remove the delegate directly and try catch error
+            if (!this.crossContext) {
+                if (delegate && delegate.invoke) {
+                    return this.target[removeFnSymbol](this.eventName, delegate.invoke, this.options);
+                }
+                else {
+                    return this.target[removeFnSymbol](this.eventName, delegate, this.options);
+                }
             }
             else {
-                return this.target[removeFnSymbol](this.eventName, delegate, this.useCapturing);
+                // add a if/else branch here for performance concern, for most times
+                // cross site context is false, so we don't need to try/catch
+                try {
+                    return this.target[removeFnSymbol](this.eventName, delegate, this.options);
+                }
+                catch (err) {
+                    // do nothing here is fine, because objects in a cross-site context are unusable
+                }
             }
         }
     };
@@ -51923,12 +52368,12 @@ function makeZoneAwareAddListener(addFnName, removeFnName, useCapturingParam, al
     }
     function cancelEventListener(eventTask) {
         var meta = eventTask.data;
-        findExistingRegisteredTask(meta.target, eventTask.invoke, meta.eventName, meta.useCapturing, true);
+        findExistingRegisteredTask(meta.target, eventTask.invoke, meta.eventName, meta.options, true);
         return meta.invokeRemoveFunc(removeFnSymbol, eventTask);
     }
     return function zoneAwareAddListener(self, args) {
         var data = metaCreator(self, args);
-        data.useCapturing = data.useCapturing || defaultUseCapturing;
+        data.options = data.options || defaultUseCapturing;
         // - Inside a Web Worker, `this` is undefined, the context is `global`
         // - When `addEventListener` is called on the global context in strict mode, `this` is undefined
         // see https://github.com/angular/zone.js/issues/190
@@ -51947,8 +52392,9 @@ function makeZoneAwareAddListener(addFnName, removeFnName, useCapturingParam, al
             validZoneHandler = data.handler && data.handler.toString() === '[object FunctionWrapper]';
         }
         catch (error) {
-            // Returning nothing here is fine, because objects in a cross-site context are unusable
-            return;
+            // we can still try to add the data.handler even we are in cross site context
+            data.crossContext = true;
+            return data.invokeAddFunc(addFnSymbol, data.handler);
         }
         // Ignore special listeners of IE11 & Edge dev tools, see
         // https://github.com/angular/zone.js/issues/150
@@ -51956,7 +52402,7 @@ function makeZoneAwareAddListener(addFnName, removeFnName, useCapturingParam, al
             return data.invokeAddFunc(addFnSymbol, data.handler);
         }
         if (!allowDuplicates) {
-            var eventTask = findExistingRegisteredTask(data.target, data.handler, data.eventName, data.useCapturing, false);
+            var eventTask = findExistingRegisteredTask(data.target, data.handler, data.eventName, data.options, false);
             if (eventTask) {
                 // we already registered, so this will have noop.
                 return data.invokeAddFunc(addFnSymbol, eventTask);
@@ -51974,11 +52420,34 @@ function makeZoneAwareRemoveListener(fnName, useCapturingParam, metaCreator) {
     var defaultUseCapturing = useCapturingParam ? false : undefined;
     return function zoneAwareRemoveListener(self, args) {
         var data = metaCreator(self, args);
-        data.useCapturing = data.useCapturing || defaultUseCapturing;
+        data.options = data.options || defaultUseCapturing;
         // - Inside a Web Worker, `this` is undefined, the context is `global`
         // - When `addEventListener` is called on the global context in strict mode, `this` is undefined
         // see https://github.com/angular/zone.js/issues/190
-        var eventTask = findExistingRegisteredTask(data.target, data.handler, data.eventName, data.useCapturing, true);
+        var delegate = null;
+        if (typeof data.handler == 'function') {
+            delegate = data.handler;
+        }
+        else if (data.handler && data.handler.handleEvent) {
+            delegate = function (event) { return data.handler.handleEvent(event); };
+        }
+        var validZoneHandler = false;
+        try {
+            // In cross site contexts (such as WebDriver frameworks like Selenium),
+            // accessing the handler object here will cause an exception to be thrown which
+            // will fail tests prematurely.
+            validZoneHandler = data.handler && data.handler.toString() === '[object FunctionWrapper]';
+        }
+        catch (error) {
+            data.crossContext = true;
+            return data.invokeRemoveFunc(symbol, data.handler);
+        }
+        // Ignore special listeners of IE11 & Edge dev tools, see
+        // https://github.com/angular/zone.js/issues/150
+        if (!delegate || validZoneHandler) {
+            return data.invokeRemoveFunc(symbol, data.handler);
+        }
+        var eventTask = findExistingRegisteredTask(data.target, data.handler, data.eventName, data.options, true);
         if (eventTask) {
             eventTask.zone.cancelTask(eventTask);
         }
@@ -51989,8 +52458,6 @@ function makeZoneAwareRemoveListener(fnName, useCapturingParam, metaCreator) {
 }
 
 
-var zoneAwareAddEventListener = makeZoneAwareAddListener(ADD_EVENT_LISTENER, REMOVE_EVENT_LISTENER);
-var zoneAwareRemoveEventListener = makeZoneAwareRemoveListener(REMOVE_EVENT_LISTENER);
 function patchEventTargetMethods(obj, addFnName, removeFnName, metaCreator) {
     if (addFnName === void 0) { addFnName = ADD_EVENT_LISTENER; }
     if (removeFnName === void 0) { removeFnName = REMOVE_EVENT_LISTENER; }
@@ -52007,10 +52474,12 @@ function patchEventTargetMethods(obj, addFnName, removeFnName, metaCreator) {
 var originalInstanceKey = zoneSymbol('originalInstance');
 // wrap some native API on `window`
 function patchClass(className) {
-    var OriginalClass = _global$1[className];
+    var OriginalClass = _global[className];
     if (!OriginalClass)
         return;
-    _global$1[className] = function () {
+    // keep original class in global
+    _global[zoneSymbol(className)] = OriginalClass;
+    _global[className] = function () {
         var a = bindArguments(arguments, className);
         switch (a.length) {
             case 0:
@@ -52032,6 +52501,8 @@ function patchClass(className) {
                 throw new Error('Arg list too long.');
         }
     };
+    // attach original delegate to patched function
+    attachOriginToPatched(_global[className], OriginalClass);
     var instance = new OriginalClass(function () { });
     var prop;
     for (prop in instance) {
@@ -52040,15 +52511,19 @@ function patchClass(className) {
             continue;
         (function (prop) {
             if (typeof instance[prop] === 'function') {
-                _global$1[className].prototype[prop] = function () {
+                _global[className].prototype[prop] = function () {
                     return this[originalInstanceKey][prop].apply(this[originalInstanceKey], arguments);
                 };
             }
             else {
-                Object.defineProperty(_global$1[className].prototype, prop, {
+                Object.defineProperty(_global[className].prototype, prop, {
                     set: function (fn) {
                         if (typeof fn === 'function') {
                             this[originalInstanceKey][prop] = Zone.current.wrap(fn, className + '.' + prop);
+                            // keep callback in wrapped function so we can
+                            // use it in Function.prototype.toString to return
+                            // the native one.
+                            attachOriginToPatched(this[originalInstanceKey][prop], fn);
                         }
                         else {
                             this[originalInstanceKey][prop] = fn;
@@ -52063,25 +52538,13 @@ function patchClass(className) {
     }
     for (prop in OriginalClass) {
         if (prop !== 'prototype' && OriginalClass.hasOwnProperty(prop)) {
-            _global$1[className][prop] = OriginalClass[prop];
+            _global[className][prop] = OriginalClass[prop];
         }
-    }
-}
-
-function createNamedFn(name, delegate) {
-    try {
-        return (Function('f', "return function " + name + "(){return f(this, arguments)}"))(delegate);
-    }
-    catch (error) {
-        // if we fail, we must be CSP, just return delegate.
-        return function () {
-            return delegate(this, arguments);
-        };
     }
 }
 function patchMethod(target, name, patchFn) {
     var proto = target;
-    while (proto && Object.getOwnPropertyNames(proto).indexOf(name) === -1) {
+    while (proto && !proto.hasOwnProperty(name)) {
         proto = Object.getPrototypeOf(proto);
     }
     if (!proto && target[name]) {
@@ -52092,7 +52555,11 @@ function patchMethod(target, name, patchFn) {
     var delegate;
     if (proto && !(delegate = proto[delegateName])) {
         delegate = proto[delegateName] = proto[name];
-        proto[name] = createNamedFn(name, patchFn(delegate, delegateName, name));
+        var patchDelegate_1 = patchFn(delegate, delegateName, name);
+        proto[name] = function () {
+            return patchDelegate_1(this, arguments);
+        };
+        attachOriginToPatched(proto[name], delegate);
     }
     return delegate;
 }
@@ -52114,8 +52581,53 @@ function findEventTask(target, evtName) {
     }
     return result;
 }
+function attachOriginToPatched(patched, original) {
+    patched[zoneSymbol('OriginalDelegate')] = original;
+}
 Zone[zoneSymbol('patchEventTargetMethods')] = patchEventTargetMethods;
 Zone[zoneSymbol('patchOnProperties')] = patchOnProperties;
+
+/**
+ * @license
+ * Copyright Google Inc. All Rights Reserved.
+ *
+ * Use of this source code is governed by an MIT-style license that can be
+ * found in the LICENSE file at https://angular.io/license
+ */
+// override Function.prototype.toString to make zone.js patched function
+// look like native function
+Zone.__load_patch('toString', function (global, Zone, api) {
+    // patch Func.prototype.toString to let them look like native
+    var originalFunctionToString = Function.prototype.toString;
+    Function.prototype.toString = function () {
+        if (typeof this === 'function') {
+            if (this[zoneSymbol('OriginalDelegate')]) {
+                return originalFunctionToString.apply(this[zoneSymbol('OriginalDelegate')], arguments);
+            }
+            if (this === Promise) {
+                var nativePromise = global[zoneSymbol('Promise')];
+                if (nativePromise) {
+                    return originalFunctionToString.apply(nativePromise, arguments);
+                }
+            }
+            if (this === Error) {
+                var nativeError = global[zoneSymbol('Error')];
+                if (nativeError) {
+                    return originalFunctionToString.apply(nativeError, arguments);
+                }
+            }
+        }
+        return originalFunctionToString.apply(this, arguments);
+    };
+    // patch Object.prototype.toString to let them look like native
+    var originalObjectToString = Object.prototype.toString;
+    Object.prototype.toString = function () {
+        if (this instanceof Promise) {
+            return '[object Promise]';
+        }
+        return originalObjectToString.apply(this, arguments);
+    };
+});
 
 /**
  * @license
@@ -52137,17 +52649,27 @@ function patchTimer(window, setName, cancelName, nameSuffix) {
                 task.invoke.apply(this, arguments);
             }
             finally {
-                delete tasksByHandleId[data.handleId];
+                if (typeof data.handleId === 'number') {
+                    // Node returns complex objects as handleIds
+                    delete tasksByHandleId[data.handleId];
+                }
             }
         }
-        
         data.args[0] = timer;
         data.handleId = setNative.apply(window, data.args);
-        tasksByHandleId[data.handleId] = task;
+        if (typeof data.handleId === 'number') {
+            // Node returns complex objects as handleIds -> no need to keep them around. Additionally,
+            // this throws an
+            // exception in older node versions and has no effect there, because of the stringified key.
+            tasksByHandleId[data.handleId] = task;
+        }
         return task;
     }
     function clearTask(task) {
-        delete tasksByHandleId[task.data.handleId];
+        if (typeof task.data.handleId === 'number') {
+            // Node returns complex objects as handleIds
+            delete tasksByHandleId[task.data.handleId];
+        }
         return clearNative(task.data.handleId);
     }
     setNative =
@@ -52246,13 +52768,11 @@ function propertyPatch() {
         return desc;
     };
 }
-
 function _redefineProperty(obj, prop, desc) {
     var originalConfigurableFlag = desc.configurable;
     desc = rewriteDescriptor(obj, prop, desc);
     return _tryDefineProperty(obj, prop, desc, originalConfigurableFlag);
 }
-
 function isUnconfigurable(obj, prop) {
     return obj && obj[unconfigurablesKey] && obj[unconfigurablesKey][prop];
 }
@@ -52368,7 +52888,7 @@ function apply(_global) {
         return proxySocket;
     };
     for (var prop in WS) {
-        _global.WebSocket[prop] = WS[prop];
+        _global['WebSocket'][prop] = WS[prop];
     }
 }
 
@@ -52389,10 +52909,10 @@ function propertyDescriptorPatch(_global) {
     if (canPatchViaPropertyDescriptor()) {
         // for browsers that we can patch the descriptor:  Chrome & Firefox
         if (isBrowser) {
-            patchOnProperties(window, eventNames);
+            patchOnProperties(window, eventNames.concat(['resize']));
             patchOnProperties(Document.prototype, eventNames);
-            if (typeof SVGElement !== 'undefined') {
-                patchOnProperties(SVGElement.prototype, eventNames);
+            if (typeof window['SVGElement'] !== 'undefined') {
+                patchOnProperties(window['SVGElement'].prototype, eventNames);
             }
             patchOnProperties(HTMLElement.prototype, eventNames);
         }
@@ -52432,18 +52952,40 @@ function canPatchViaPropertyDescriptor() {
     // by default XMLHttpRequest.prototype.onreadystatechange is undefined
     // without adding enumerable and configurable will cause onreadystatechange
     // non-configurable
-    Object.defineProperty(XMLHttpRequest.prototype, 'onreadystatechange', {
-        enumerable: true,
-        configurable: true,
-        get: function () {
-            return true;
-        }
-    });
-    var req = new XMLHttpRequest();
-    var result = !!req.onreadystatechange;
-    // restore original desc
-    Object.defineProperty(XMLHttpRequest.prototype, 'onreadystatechange', xhrDesc || {});
-    return result;
+    // and if XMLHttpRequest.prototype.onreadystatechange is undefined,
+    // we should set a real desc instead a fake one
+    if (xhrDesc) {
+        Object.defineProperty(XMLHttpRequest.prototype, 'onreadystatechange', {
+            enumerable: true,
+            configurable: true,
+            get: function () {
+                return true;
+            }
+        });
+        var req = new XMLHttpRequest();
+        var result = !!req.onreadystatechange;
+        // restore original desc
+        Object.defineProperty(XMLHttpRequest.prototype, 'onreadystatechange', xhrDesc || {});
+        return result;
+    }
+    else {
+        Object.defineProperty(XMLHttpRequest.prototype, 'onreadystatechange', {
+            enumerable: true,
+            configurable: true,
+            get: function () {
+                return this[zoneSymbol('fakeonreadystatechange')];
+            },
+            set: function (value) {
+                this[zoneSymbol('fakeonreadystatechange')] = value;
+            }
+        });
+        var req = new XMLHttpRequest();
+        var detectFunc = function () { };
+        req.onreadystatechange = detectFunc;
+        var result = req[zoneSymbol('fakeonreadystatechange')] === detectFunc;
+        req.onreadystatechange = null;
+        return result;
+    }
 }
 
 var unboundKey = zoneSymbol('unbound');
@@ -52475,7 +53017,6 @@ function patchViaCapturingAllTheEvents() {
     for (var i = 0; i < eventNames.length; i++) {
         _loop_1(i);
     }
-    
 }
 
 /**
@@ -52512,6 +53053,7 @@ function registerElementPatch(_global) {
         }
         return _registerElement.apply(document, [name, opts]);
     };
+    attachOriginToPatched(document.registerElement, _registerElement);
 }
 
 /**
@@ -52521,137 +53063,152 @@ function registerElementPatch(_global) {
  * Use of this source code is governed by an MIT-style license that can be
  * found in the LICENSE file at https://angular.io/license
  */
-var set = 'set';
-var clear = 'clear';
-var blockingMethods = ['alert', 'prompt', 'confirm'];
-var _global = typeof window !== 'undefined' && window || typeof self !== 'undefined' && self || commonjsGlobal;
-patchTimer(_global, set, clear, 'Timeout');
-patchTimer(_global, set, clear, 'Interval');
-patchTimer(_global, set, clear, 'Immediate');
-patchTimer(_global, 'request', 'cancel', 'AnimationFrame');
-patchTimer(_global, 'mozRequest', 'mozCancel', 'AnimationFrame');
-patchTimer(_global, 'webkitRequest', 'webkitCancel', 'AnimationFrame');
-for (var i = 0; i < blockingMethods.length; i++) {
-    var name_1 = blockingMethods[i];
-    patchMethod(_global, name_1, function (delegate, symbol, name) {
-        return function (s, args) {
-            return Zone.current.run(delegate, _global, args, name);
-        };
-    });
-}
-eventTargetPatch(_global);
-// patch XMLHttpRequestEventTarget's addEventListener/removeEventListener
-var XMLHttpRequestEventTarget = _global['XMLHttpRequestEventTarget'];
-if (XMLHttpRequestEventTarget && XMLHttpRequestEventTarget.prototype) {
-    patchEventTargetMethods(XMLHttpRequestEventTarget.prototype);
-}
-propertyDescriptorPatch(_global);
-patchClass('MutationObserver');
-patchClass('WebKitMutationObserver');
-patchClass('FileReader');
-propertyPatch();
-registerElementPatch(_global);
-// Treat XMLHTTPRequest as a macrotask.
-patchXHR(_global);
-var XHR_TASK = zoneSymbol('xhrTask');
-var XHR_SYNC = zoneSymbol('xhrSync');
-var XHR_LISTENER = zoneSymbol('xhrListener');
-var XHR_SCHEDULED = zoneSymbol('xhrScheduled');
-function patchXHR(window) {
-    function findPendingTask(target) {
-        var pendingTask = target[XHR_TASK];
-        return pendingTask;
-    }
-    function scheduleTask(task) {
-        XMLHttpRequest[XHR_SCHEDULED] = false;
-        var data = task.data;
-        // remove existing event listener
-        var listener = data.target[XHR_LISTENER];
-        if (listener) {
-            data.target.removeEventListener('readystatechange', listener);
-        }
-        var newListener = data.target[XHR_LISTENER] = function () {
-            if (data.target.readyState === data.target.DONE) {
-                // sometimes on some browsers XMLHttpRequest will fire onreadystatechange with
-                // readyState=4 multiple times, so we need to check task state here
-                if (!data.aborted && XMLHttpRequest[XHR_SCHEDULED] && task.state === 'scheduled') {
-                    task.invoke();
-                }
-            }
-        };
-        data.target.addEventListener('readystatechange', newListener);
-        var storedTask = data.target[XHR_TASK];
-        if (!storedTask) {
-            data.target[XHR_TASK] = task;
-        }
-        sendNative.apply(data.target, data.args);
-        XMLHttpRequest[XHR_SCHEDULED] = true;
-        return task;
-    }
-    function placeholderCallback() { }
-    function clearTask(task) {
-        var data = task.data;
-        // Note - ideally, we would call data.target.removeEventListener here, but it's too late
-        // to prevent it from firing. So instead, we store info for the event listener.
-        data.aborted = true;
-        return abortNative.apply(data.target, data.args);
-    }
-    var openNative = patchMethod(window.XMLHttpRequest.prototype, 'open', function () { return function (self, args) {
-        self[XHR_SYNC] = args[2] == false;
-        return openNative.apply(self, args);
-    }; });
-    var sendNative = patchMethod(window.XMLHttpRequest.prototype, 'send', function () { return function (self, args) {
-        var zone = Zone.current;
-        if (self[XHR_SYNC]) {
-            // if the XHR is sync there is no task to schedule, just execute the code.
-            return sendNative.apply(self, args);
-        }
-        else {
-            var options = { target: self, isPeriodic: false, delay: null, args: args, aborted: false };
-            return zone.scheduleMacroTask('XMLHttpRequest.send', placeholderCallback, options, scheduleTask, clearTask);
-        }
-    }; });
-    var abortNative = patchMethod(window.XMLHttpRequest.prototype, 'abort', function (delegate) { return function (self, args) {
-        var task = findPendingTask(self);
-        if (task && typeof task.type == 'string') {
-            // If the XHR has already completed, do nothing.
-            // If the XHR has already been aborted, do nothing.
-            // Fix #569, call abort multiple times before done will cause
-            // macroTask task count be negative number
-            if (task.cancelFn == null || (task.data && task.data.aborted)) {
-                return;
-            }
-            task.zone.cancelTask(task);
-        }
-        // Otherwise, we are trying to abort an XHR which has not yet been sent, so there is no task
-        // to cancel. Do nothing.
-    }; });
-}
-/// GEO_LOCATION
-if (_global['navigator'] && _global['navigator'].geolocation) {
-    patchPrototype(_global['navigator'].geolocation, ['getCurrentPosition', 'watchPosition']);
-}
-// handle unhandled promise rejection
-function findPromiseRejectionHandler(evtName) {
-    return function (e) {
-        var eventTasks = findEventTask(_global, evtName);
-        eventTasks.forEach(function (eventTask) {
-            // windows has added unhandledrejection event listener
-            // trigger the event listener
-            var PromiseRejectionEvent = _global['PromiseRejectionEvent'];
-            if (PromiseRejectionEvent) {
-                var evt = new PromiseRejectionEvent(evtName, { promise: e.promise, reason: e.rejection });
-                eventTask.invoke(evt);
-            }
+Zone.__load_patch('timers', function (global, Zone, api) {
+    var set = 'set';
+    var clear = 'clear';
+    patchTimer(global, set, clear, 'Timeout');
+    patchTimer(global, set, clear, 'Interval');
+    patchTimer(global, set, clear, 'Immediate');
+    patchTimer(global, 'request', 'cancel', 'AnimationFrame');
+    patchTimer(global, 'mozRequest', 'mozCancel', 'AnimationFrame');
+    patchTimer(global, 'webkitRequest', 'webkitCancel', 'AnimationFrame');
+});
+Zone.__load_patch('blocking', function (global, Zone, api) {
+    var blockingMethods = ['alert', 'prompt', 'confirm'];
+    for (var i = 0; i < blockingMethods.length; i++) {
+        var name_1 = blockingMethods[i];
+        patchMethod(global, name_1, function (delegate, symbol, name) {
+            return function (s, args) {
+                return Zone.current.run(delegate, global, args, name);
+            };
         });
-    };
-}
-if (_global['PromiseRejectionEvent']) {
-    Zone[zoneSymbol('unhandledPromiseRejectionHandler')] =
-        findPromiseRejectionHandler('unhandledrejection');
-    Zone[zoneSymbol('rejectionHandledHandler')] =
-        findPromiseRejectionHandler('rejectionhandled');
-}
+    }
+});
+Zone.__load_patch('EventTarget', function (global, Zone, api) {
+    eventTargetPatch(global);
+    // patch XMLHttpRequestEventTarget's addEventListener/removeEventListener
+    var XMLHttpRequestEventTarget = global['XMLHttpRequestEventTarget'];
+    if (XMLHttpRequestEventTarget && XMLHttpRequestEventTarget.prototype) {
+        patchEventTargetMethods(XMLHttpRequestEventTarget.prototype);
+    }
+    patchClass('MutationObserver');
+    patchClass('WebKitMutationObserver');
+    patchClass('FileReader');
+});
+Zone.__load_patch('on_property', function (global, Zone, api) {
+    propertyDescriptorPatch(global);
+    propertyPatch();
+    registerElementPatch(global);
+});
+Zone.__load_patch('XHR', function (global, Zone, api) {
+    // Treat XMLHTTPRequest as a macrotask.
+    patchXHR(global);
+    var XHR_TASK = zoneSymbol('xhrTask');
+    var XHR_SYNC = zoneSymbol('xhrSync');
+    var XHR_LISTENER = zoneSymbol('xhrListener');
+    var XHR_SCHEDULED = zoneSymbol('xhrScheduled');
+    function patchXHR(window) {
+        function findPendingTask(target) {
+            var pendingTask = target[XHR_TASK];
+            return pendingTask;
+        }
+        function scheduleTask(task) {
+            XMLHttpRequest[XHR_SCHEDULED] = false;
+            var data = task.data;
+            // remove existing event listener
+            var listener = data.target[XHR_LISTENER];
+            if (listener) {
+                data.target.removeEventListener('readystatechange', listener);
+            }
+            var newListener = data.target[XHR_LISTENER] = function () {
+                if (data.target.readyState === data.target.DONE) {
+                    // sometimes on some browsers XMLHttpRequest will fire onreadystatechange with
+                    // readyState=4 multiple times, so we need to check task state here
+                    if (!data.aborted && XMLHttpRequest[XHR_SCHEDULED] &&
+                        task.state === 'scheduled') {
+                        task.invoke();
+                    }
+                }
+            };
+            data.target.addEventListener('readystatechange', newListener);
+            var storedTask = data.target[XHR_TASK];
+            if (!storedTask) {
+                data.target[XHR_TASK] = task;
+            }
+            sendNative.apply(data.target, data.args);
+            XMLHttpRequest[XHR_SCHEDULED] = true;
+            return task;
+        }
+        function placeholderCallback() { }
+        function clearTask(task) {
+            var data = task.data;
+            // Note - ideally, we would call data.target.removeEventListener here, but it's too late
+            // to prevent it from firing. So instead, we store info for the event listener.
+            data.aborted = true;
+            return abortNative.apply(data.target, data.args);
+        }
+        var openNative = patchMethod(window.XMLHttpRequest.prototype, 'open', function () { return function (self, args) {
+            self[XHR_SYNC] = args[2] == false;
+            return openNative.apply(self, args);
+        }; });
+        var sendNative = patchMethod(window.XMLHttpRequest.prototype, 'send', function () { return function (self, args) {
+            var zone = Zone.current;
+            if (self[XHR_SYNC]) {
+                // if the XHR is sync there is no task to schedule, just execute the code.
+                return sendNative.apply(self, args);
+            }
+            else {
+                var options = { target: self, isPeriodic: false, delay: null, args: args, aborted: false };
+                return zone.scheduleMacroTask('XMLHttpRequest.send', placeholderCallback, options, scheduleTask, clearTask);
+            }
+        }; });
+        var abortNative = patchMethod(window.XMLHttpRequest.prototype, 'abort', function (delegate) { return function (self, args) {
+            var task = findPendingTask(self);
+            if (task && typeof task.type == 'string') {
+                // If the XHR has already completed, do nothing.
+                // If the XHR has already been aborted, do nothing.
+                // Fix #569, call abort multiple times before done will cause
+                // macroTask task count be negative number
+                if (task.cancelFn == null || (task.data && task.data.aborted)) {
+                    return;
+                }
+                task.zone.cancelTask(task);
+            }
+            // Otherwise, we are trying to abort an XHR which has not yet been sent, so there is no
+            // task
+            // to cancel. Do nothing.
+        }; });
+    }
+});
+Zone.__load_patch('geolocation', function (global, Zone, api) {
+    /// GEO_LOCATION
+    if (global['navigator'] && global['navigator'].geolocation) {
+        patchPrototype(global['navigator'].geolocation, ['getCurrentPosition', 'watchPosition']);
+    }
+});
+Zone.__load_patch('PromiseRejectionEvent', function (global, Zone, api) {
+    // handle unhandled promise rejection
+    function findPromiseRejectionHandler(evtName) {
+        return function (e) {
+            var eventTasks = findEventTask(global, evtName);
+            eventTasks.forEach(function (eventTask) {
+                // windows has added unhandledrejection event listener
+                // trigger the event listener
+                var PromiseRejectionEvent = global['PromiseRejectionEvent'];
+                if (PromiseRejectionEvent) {
+                    var evt = new PromiseRejectionEvent(evtName, { promise: e.promise, reason: e.rejection });
+                    eventTask.invoke(evt);
+                }
+            });
+        };
+    }
+    if (global['PromiseRejectionEvent']) {
+        Zone[zoneSymbol('unhandledPromiseRejectionHandler')] =
+            findPromiseRejectionHandler('unhandledrejection');
+        Zone[zoneSymbol('rejectionHandledHandler')] =
+            findPromiseRejectionHandler('rejectionhandled');
+    }
+});
 
 /**
  * @license
@@ -52666,7 +53223,7 @@ if (_global['PromiseRejectionEvent']) {
 
 class FooComponent {
     constructor() {
-        this.message = "hello world";
+        this.message = "Hello World";
     }
 }
 

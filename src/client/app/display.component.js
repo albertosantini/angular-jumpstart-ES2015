@@ -47,8 +47,7 @@
         imports: [ng.platformBrowser.BrowserModule],
         declarations: [component],
         bootstrap: [component]
-    })
-    .Class({
+    }).Class({
         constructor: function constructor() {}
     });
 

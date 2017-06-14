@@ -31,8 +31,7 @@
         imports: [ng.platformBrowser.BrowserModule, ng.http.HttpModule],
         declarations: [component],
         bootstrap: [component]
-    })
-    .Class({
+    }).Class({
         constructor: function constructor() {}
     });
 

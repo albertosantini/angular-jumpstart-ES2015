@@ -5,22 +5,21 @@
         .module("dummy", []);
 
     const fooS = ng.core
-            .Class({
-                constructor: [ng.http.Http, function FooService(http) {
-                    this.http = http;
-                }],
-                getFoo() {
-                    return this.http.get("app/greetings.json").map(
-                        res => res.json()
-                    ).toPromise();
-                }
-            });
+        .Class({
+            constructor: [ng.http.Http, function FooService(http) {
+                this.http = http;
+            }],
+            getFoo() {
+                return this.http.get("app/greetings.json").map(
+                    res => res.json()
+                ).toPromise();
+            }
+        });
 
     const module2 = ng.core.NgModule({
         imports: [ng.platformBrowser.BrowserModule, ng.http.HttpModule],
         providers: [fooS]
-    })
-    .Class({
+    }).Class({
         constructor: function constructor() {}
     });
 

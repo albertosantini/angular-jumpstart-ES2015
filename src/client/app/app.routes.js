@@ -31,8 +31,7 @@
         imports: [ng.platformBrowser.BrowserModule, routing],
         declarations: [component, app.View1],
         bootstrap: [component]
-    })
-    .Class({
+    }).Class({
         constructor: function constructor() {}
     });
 

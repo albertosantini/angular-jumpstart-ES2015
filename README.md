@@ -1,5 +1,4 @@
 # Angular 2 JumpStart with ES5
-[![NGN Dependencies](https://david-dm.org/albertosantini/angular2-es5-jumpstart.png)](https://david-dm.org/albertosantini/angular2-es5-jumpstart)
 [![Build Status](https://travis-ci.org/albertosantini/angular2-es5-jumpstart.png)](https://travis-ci.org/albertosantini/angular2-es5-jumpstart)
 
 

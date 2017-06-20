@@ -9,18 +9,18 @@
     },
     "license": "MIT",
     "dependencies": {
-        "@angular/common": "^4.2.2",
-        "@angular/compiler": "^4.2.2",
-        "@angular/core": "^4.2.2",
-        "@angular/http": "^4.2.2",
-        "@angular/platform-browser": "^4.2.2",
-        "@angular/platform-browser-dynamic": "^4.2.2",
-        "@angular/router": "^4.2.2",
-        "@angular/upgrade": "^4.2.2",
+        "@angular/common": "^4.2.3",
+        "@angular/compiler": "^4.2.3",
+        "@angular/core": "^4.2.3",
+        "@angular/http": "^4.2.3",
+        "@angular/platform-browser": "^4.2.3",
+        "@angular/platform-browser-dynamic": "^4.2.3",
+        "@angular/router": "^4.2.3",
+        "@angular/upgrade": "^4.2.3",
         "angular": "~1.6.4",
         "core-js": "~2.4.1",
         "reflect-metadata": "~0.1.10",
-        "rxjs": "~5.4.0",
+        "rxjs": "~5.4.1",
         "zone.js": "^0.8.12"
     },
     "devDependencies": {
@@ -29,6 +29,6 @@
         "rollup": "^0.43.0",
         "rollup-plugin-commonjs": "^8.0.2",
         "@oasisdigital/rollup-plugin-node-resolve": "^2.0.2",
-        "uglify-es": "^3.0.15"
+        "uglify-es": "^3.0.18"
     }
 }

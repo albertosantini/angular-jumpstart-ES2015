@@ -29,7 +29,8 @@ Then in the folder project:
 
 - [Angular Quickstart](https://angular.io/docs/js/latest/quickstart.html)
 - [Angular 5 min Tutorial](https://angular.io/docs/ts/latest/tutorial/)
-- [Angular Cheat Sheet](https://angular.io/docs/js/latest/guide/cheatsheet.html)
+- [Angular Cookbook](https://v2.angular.io/docs/js/latest/cookbook/ts-to-js.html)
+- [Angular Javascript Documentation](https://github.com/angular/angular/issues/19126#issuecomment-328370140)
 - [Writing An Angular2 Component in Today’s JavaScript (ES5)](http://gurustop.net/blog/2015/12/16/angular2-beta-javascript-component)
 - [Seed project for Angular 2 apps with statically typed build](https://github.com/mgechev/angular2-seed)
 - [Angular 2 JumpStart with TypeScript](https://github.com/DanWahlin/Angular2-JumpStart)

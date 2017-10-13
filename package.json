@@ -6,7 +6,7 @@
         "start": "node server.js",
         "test": "eslint server.js src/**/*.js",
         "rollup": "rollup -c && uglifyjs build/app.bundle.js -c -m -o build/app.bundle.min.js",
-        "deploy": "now deploy"
+        "deploy": "now deploy --public && now alias"
     },
     "license": "MIT",
     "dependencies": {

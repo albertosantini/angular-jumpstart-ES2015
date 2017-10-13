@@ -3,7 +3,7 @@
 
 
 The goal of this jumpstart app is to provide a simple way to get started with
-Angular 2 while also showing several key Angular 2 features. The sample relies
+Angular while also showing several key Angular features. The sample relies
 on ES5.
 
 ## Installation and running

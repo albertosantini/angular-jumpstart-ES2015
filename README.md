@@ -1,4 +1,4 @@
-# Angular 2 JumpStart with ES5
+# Angular JumpStart with ES5
 [![Build Status](https://travis-ci.org/albertosantini/angular2-es5-jumpstart.png)](https://travis-ci.org/albertosantini/angular2-es5-jumpstart)
 
 
@@ -23,7 +23,7 @@ Then in the folder project:
 - Defining routes
 - Using the Http object for Ajax calls
 - Using data binding syntax
-- Mixing Angular 1 and Angular 2
+- Mixing AngularJS and Angular
 
 ## Resources and Credits
 

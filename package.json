@@ -5,7 +5,7 @@
     "scripts": {
         "start": "node server.js",
         "test": "eslint server.js src/**/*.js",
-        "rollup": "rollup -c && uglifyjs build/app.bundle.js -c -m -o build/app.bundle.min.js",
+        "rollup": "rollup -c && uglifyjs build/app.bundle.js -c -m -o build/app.bundle.min.js && rm build/app.bundle.js",
         "deploy": "now deploy --public && now alias"
     },
     "license": "MIT",
@@ -25,12 +25,12 @@
         "zone.js": "^0.8.18"
     },
     "devDependencies": {
-        "@oasisdigital/rollup-plugin-node-resolve": "^2.0.2",
         "eslint": "^4.12.1",
         "express": "^4.16.2",
         "now": "^8.5.4",
         "rollup": "^0.52.0",
         "rollup-plugin-commonjs": "^8.2.6",
+        "rollup-plugin-node-resolve": "^3.0.0",
         "uglify-es": "^3.2.0"
     },
     "now": {

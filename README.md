@@ -31,10 +31,13 @@ DSL. The replacement is to use TypeScript and `@Decorator` format.
 - [Compiler: Native ES6 support for JIT and AOT](https://github.com/angular/angular/issues/15127)
 
 ```
-Why do you think this? The output of the compiler is of no consequence to other parts of the application. The problem with JIT is. that it demands a browser with full ES2015 support. While way more common now, there might be edge cases creeping up here.
-I know there are some nuances here that I ignored, but AFAIK those are just of influence on angular itself, not on the other stuff you load into your app.
+Why do you think this? The output of the compiler is of no consequence to other
+parts of the application. The problem with JIT is. that it demands a browser
+with full ES2015 support. While way more common now, there might be edge cases
+creeping up here.
+I know there are some nuances here that I ignored, but AFAIK those are just of
+influence on angular itself, not on the other stuff you load into your app.
 ```
-
 
 ## Features
 

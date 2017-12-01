@@ -1,4 +1,4 @@
-# Angular JumpStart with ES5
+# Angular JumpStart with ES5 (and ES2015)
 [![Build Status](https://travis-ci.org/albertosantini/angular2-es5-jumpstart.png)](https://travis-ci.org/albertosantini/angular2-es5-jumpstart)
 
 
@@ -14,6 +14,11 @@ Then in the folder project:
 
 - `npm install`
 - `npm start`
+
+Eventually point your web brower to
+
+- `http://localhost:8000` for ES5
+- `http://localhost:8000/index-es2015.html` for ES2015
 
 ## Notes about Angular 5.x
 

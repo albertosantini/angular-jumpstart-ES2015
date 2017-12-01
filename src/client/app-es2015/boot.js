@@ -1,10 +1,10 @@
-import { NgModule, Component } from "@angular/core";
-import { BrowserModule } from "@angular/platform-browser";
-import { platformBrowserDynamic } from "@angular/platform-browser-dynamic";
-
 import "core-js/shim";
 import "reflect-metadata";
 import "zone.js/dist/zone";
+
+import { NgModule, Component } from "@angular/core";
+import { BrowserModule } from "@angular/platform-browser";
+import { platformBrowserDynamic } from "@angular/platform-browser-dynamic";
 
 class FooComponent {
     constructor() {
@@ -15,7 +15,7 @@ class FooComponent {
 FooComponent.annotations = [
     new Component({
         selector: "app",
-        template: "<h1>Foo Component - {{ $ctrl.message }}</h1>"
+        template: "<h1>Foo Component - {{ message }}</h1>"
     })
 ];
 

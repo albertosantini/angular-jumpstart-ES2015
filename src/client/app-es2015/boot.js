@@ -2,20 +2,20 @@ import "core-js/shim";
 import "reflect-metadata";
 import "zone.js/dist/zone";
 
-import { NgModule, Component } from "@angular/core";
+import { NgModule, Component, VERSION, enableProdMode } from "@angular/core";
 import { BrowserModule } from "@angular/platform-browser";
 import { platformBrowserDynamic } from "@angular/platform-browser-dynamic";
+import { HttpClientModule, HttpClient } from "@angular/common/http";
 
-class FooComponent {
+class AppComponent {
     constructor() {
-        this.message = "Hello World";
+        this.version = VERSION.full;
     }
 }
-
-FooComponent.annotations = [
+AppComponent.annotations = [
     new Component({
         selector: "app",
-        template: "<h1>Foo Component - {{ message }}</h1>"
+        template: "<h1>App with Angular {{ version }}</h1>"
     })
 ];
 
@@ -26,12 +26,13 @@ class AppModule {
 
 AppModule.annotations = [
     new NgModule({
-        imports: [BrowserModule],
-        declarations: [FooComponent],
-        bootstrap: [FooComponent]
+        imports: [BrowserModule, HttpClientModule],
+        declarations: [AppComponent],
+        bootstrap: [AppComponent]
     })
 ];
 
+enableProdMode();
 platformBrowserDynamic().bootstrapModule(AppModule);
 
 // platformBrowserDynamic().bootstrapModule(AppModule.then(platformRef => {

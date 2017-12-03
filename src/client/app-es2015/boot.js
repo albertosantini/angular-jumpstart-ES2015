@@ -5,7 +5,9 @@ import "zone.js/dist/zone";
 import { NgModule, Component, VERSION, enableProdMode } from "@angular/core";
 import { BrowserModule } from "@angular/platform-browser";
 import { platformBrowserDynamic } from "@angular/platform-browser-dynamic";
-import { HttpClientModule, HttpClient } from "@angular/common/http";
+import { HttpClientModule } from "@angular/common/http";
+
+// import { HttpClientModule, HttpClient } from "@angular/common/http";
 
 class AppComponent {
     constructor() {

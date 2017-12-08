@@ -44,6 +44,8 @@ I know there are some nuances here that I ignored, but AFAIK those are just of
 influence on angular itself, not on the other stuff you load into your app.
 ```
 
+- First atttempt with 5.x and annotations: [Live example](https://stackblitz.com/edit/angularjs-irc-starter-mtx1xe?file=main.ts)
+
 ## Features
 
 - Bootstrapping the app and the components

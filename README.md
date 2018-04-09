@@ -5,7 +5,7 @@ Angular using ES2015.
 
 ## Demo
 
-- [Live Demo on Stackblitz](stackblitz.com/github/albertosantini/angular-es2015-jumpstart)
+- [Live Demo on Stackblitz](https://stackblitz.com/github/albertosantini/angular-es2015-jumpstart)
 - [Integration between AngularJS and Angular](https://stackblitz.com/edit/ngupgradelite-playground)
 
 ## Features

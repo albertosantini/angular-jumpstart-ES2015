@@ -5,7 +5,7 @@ Angular using ES2015.
 
 ## Demo
 
-- [Live Demo on Stackblitz](https://stackblitz.com/edit/angularjs-irc-starter-qifuew)
+- [Live Demo on Stackblitz](https://stackblitz.com/edit/angularjs-irc-starter-gskpun)
 - [Integration between AngularJS and Angular](https://stackblitz.com/edit/ngupgradelite-playground)
 
 ## Features
@@ -20,10 +20,10 @@ Angular using ES2015.
 ## Notes
 
 - Stackblitz demo contains `main.ts` and not `main.js`, because we need to 
-create the automatic bundling machinery. Indeed the code would be the same
+create the automatic bundling machinery. Indeed the code is the same.
 
 - Before Angular `5.x`, due to the presence of `reflect-metadata`, Angular 
-provided a DSL to code in ES5 or ES2015 (see [tag 4.4.6](https://github.com/albertosantini/angular2-es5-jumpstart/tree/4.4.6))
+provided a DSL to code in ES5 or ES2015 (see [tag 4.4.6](https://github.com/albertosantini/angular2-es5-jumpstart/tree/4.4.6)).
 
 ## Notes about Angular 5.x
 

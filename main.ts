@@ -10,27 +10,27 @@ import { RouterModule } from "@angular/router";
 // simple example
 
 class FooComponent {
-    static annotations = [
-        new Component({
-            selector: "my-app",
-            template: "<h1>Angular {{ version }} in ES2015</h1>"
-        })
-    ];
-
     constructor() {
         this.version = VERSION.full;
     }
 }
 
-class AppModule {
-    static annotations = [
-        new NgModule({
-            imports: [BrowserModule],
-            declarations: [FooComponent],
-            bootstrap: [FooComponent]
-        })
-    ];
-}
+FooComponent.annotations = [
+    new Component({
+        selector: "my-app",
+        template: "<h1>Angular {{ version }} in ES2015</h1>"
+    })
+];
+
+class AppModule {}
+
+AppModule.annotations = [
+    new NgModule({
+        imports: [BrowserModule],
+        declarations: [FooComponent],
+        bootstrap: [FooComponent]
+    })
+];
 
 // list example
 
@@ -55,24 +55,6 @@ class FriendsService {
 }
 
 class ListComponent {
-    static annotations = [
-        new Component({
-            selector: "my-list",
-            viewProviders: [FriendsService],
-            template: `
-                <p>My name: {{ me }}
-                <p>Friends:</p>
-                <ul>
-                <li *ngFor="let name of names">{{ name }}</li>
-                </ul>
-                <button (click)="addFriend('Foo')">Add Foo friend</button>
-                <button (click)="addAsyncFriend('Bar')">Simulate async update</button>
-            `
-        })
-    ];
-
-    static parameters = [FriendsService];
-
     constructor(friendsService) {
         this.friendsService = friendsService;
 
@@ -89,28 +71,37 @@ class ListComponent {
     }
 }
 
-class ListModule {
-    static annotations = [
-        new NgModule({
-            imports: [BrowserModule],
-            declarations: [ListComponent],
-            bootstrap: [ListComponent]
-        })
-    ];
-}
+ListComponent.annotations = [
+    new Component({
+        selector: "my-list",
+        viewProviders: [FriendsService],
+        template: `
+            <p>My name: {{ me }}
+            <p>Friends:</p>
+            <ul>
+            <li *ngFor="let name of names">{{ name }}</li>
+            </ul>
+            <button (click)="addFriend('Foo')">Add Foo friend</button>
+            <button (click)="addAsyncFriend('Bar')">Simulate async update</button>
+        `
+    })
+];
+
+ListComponent.parameters = [FriendsService];
+
+class ListModule {}
+
+ListModule.annotations = [
+    new NgModule({
+        imports: [BrowserModule],
+        declarations: [ListComponent],
+        bootstrap: [ListComponent]
+    })
+];
 
 // hello example
 
 class HelloComponent {
-    static annotations = [
-        new Component({
-            selector: "my-hello",
-            template: "<p>{{ greeting }} world! {{ greetingFromJSON }}</p>"
-        })
-    ];
-
-    static parameters = [HttpClient];
-
     constructor(http) {
         this.http = http;
 
@@ -131,52 +122,61 @@ class HelloComponent {
     }
 }
 
-class HelloModule {
-    static annotations = [
-        new NgModule({
-            imports: [BrowserModule, HttpClientModule],
-            declarations: [HelloComponent],
-            bootstrap: [HelloComponent]
-        })
-    ];
-}
+HelloComponent.annotations = [
+    new Component({
+        selector: "my-hello",
+        template: "<p>{{ greeting }} world! {{ greetingFromJSON }}</p>"
+    })
+];
+
+HelloComponent.parameters = [HttpClient];
+
+class HelloModule {}
+
+HelloModule.annotations = [
+    new NgModule({
+        imports: [BrowserModule, HttpClientModule],
+        declarations: [HelloComponent],
+        bootstrap: [HelloComponent]
+    })
+];
 
 // routes
 
 class View1Component {
-    static annotations = [
-        new Component({
-            template: "<p>{{ viewName }} loaded with the router</p>"
-        })
-    ];
-
     constructor() {
         this.viewName = "My View";
     }
 }
 
-class MyRoutesComponent {
-    static annotations = [
-        new Component({
-            selector: "my-routes",
-            template: "<h2>My routes</h2><router-outlet></router-outlet>"
-        })
-    ];
-}
+View1Component.annotations = [
+    new Component({
+        template: "<p>{{ viewName }} loaded with the router</p>"
+    })
+];
+
+class MyRoutesComponent {}
+
+MyRoutesComponent.annotations = [
+    new Component({
+        selector: "my-routes",
+        template: "<h2>My routes</h2><router-outlet></router-outlet>"
+    })
+];
 
 const routing = RouterModule.forRoot([
     { path: "", component: View1Component }
 ]);
 
-class MyRoutesModule {
-    static annotations = [
-        new NgModule({
-            imports: [BrowserModule, routing],
-            declarations: [MyRoutesComponent, View1Component],
-            bootstrap: [MyRoutesComponent]
-        })
-    ];
-}
+class MyRoutesModule {}
+
+MyRoutesModule.annotations = [
+    new NgModule({
+        imports: [BrowserModule, routing],
+        declarations: [MyRoutesComponent, View1Component],
+        bootstrap: [MyRoutesComponent]
+    })
+];
 
 // boot
 
